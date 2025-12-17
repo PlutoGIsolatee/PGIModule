@@ -159,6 +159,7 @@ function PGIModules(kitName) {
             Object.keys(this).forEach((key) => {
                 here[key] = this[key];
             });
+            return this;
         }
         Object.defineProperty(basicModule, "inject", {
             value: inject
@@ -538,7 +539,7 @@ function PGIModules(kitName) {
 
                         return analyzeRuleModule;
                     })();
-                }
+                } descriptors
                 case "analyzeUrlModule": {
                     return (function () {
                         const analyzeUrlModule = Object.create(generalModule);
@@ -557,7 +558,6 @@ function PGIModules(kitName) {
                     })();
                 }
             }
-        })()
-
+        })();
     })();
 }
