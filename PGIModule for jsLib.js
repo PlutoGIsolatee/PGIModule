@@ -3,7 +3,6 @@
  * @param {string} [kitName] - 为空时自动判断环境创建模块实例
  */
 function PGIModules(kitName) {
-    "use strict";
 
     const {
         java,
