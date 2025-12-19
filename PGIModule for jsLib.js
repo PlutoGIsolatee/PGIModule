@@ -1,6 +1,7 @@
 /**
  * 
  * @param {string} [kitName] - 为空时自动判断环境创建模块实例
+ * @returns {Object}
  */
 function PGIModules(kitName) {
 
@@ -26,7 +27,7 @@ function PGIModules(kitName) {
         }
     }
 
-    return (function () {
+    return (function() {
         /**
          * 定义无依赖方法属性
          * =========================
@@ -40,8 +41,8 @@ function PGIModules(kitName) {
         function objectToString(obj) {
             return (
                 (!obj || ((typeof obj) !== "object") || (obj instanceof Packages.java.lang.Object)) ?
-                    String(obj) :
-                    JSON.stringify(obj)
+                String(obj) :
+                JSON.stringify(obj)
             );
         }
 
@@ -88,11 +89,11 @@ function PGIModules(kitName) {
          * Error转string；实现了自定义ExtraMessage属性用于额外堆栈描述
          * @param {Error} error
          * @param {number} [maxDepth = 10] - cause栈遍历深度限度
-         * @param {number} [maxMessageLength = 500]
+         * @param {number} [maxMessageLength = 2000]
          * @returns {string} 形如Error: msg\nextraMessage\n<= Error: msg\nextraMessage\n...
          * @throws {TypeError} 首个参数应为Error类型
          */
-        function errorToString(error, maxDepth = 5, maxMessageLength = 500) {
+        function errorToString(error, maxDepth = 5, maxMessageLength = 2000) {
             if (!(error instanceof Error)) {
                 let er = new TypeError("errorToString 首个参数应为Error类型");
                 throw er;
@@ -103,19 +104,19 @@ function PGIModules(kitName) {
                     (err.name || "Error") +
                     (
                         (err.message !== undefined) ?
-                            (": " +
-                                truncateMiddle(
-                                    err.message, maxMessageLength
-                                )) :
-                            ""
+                        (": " +
+                            truncateMiddle(
+                                err.message, maxMessageLength
+                            )) :
+                        ""
                     ) +
                     (
                         (err.extraMessage !== undefined) ?
-                            ("\n" +
-                                truncateMiddle(
-                                    err.extraMessage, maxMessageLength
-                                )) :
-                            ""
+                        ("\n" +
+                            truncateMiddle(
+                                err.extraMessage, maxMessageLength
+                            )) :
+                        ""
                     )
                 );
                 return (str);
@@ -151,20 +152,7 @@ function PGIModules(kitName) {
         };
 
 
-        /**
-         * 把模块方法注入全局；本身不可枚举，不会注入
-         */
-        function inject() {
-            Object.keys(this).forEach((key) => {
-                here[key] = this[key];
-            });
-            return this;
-        }
-        Object.defineProperty(basicModule, "inject", {
-            value: inject
-        });
-
-        return (function () {
+        return (function() {
 
             const generalModule = Object.create(basicModule);
 
@@ -181,8 +169,8 @@ function PGIModules(kitName) {
                 java.toast(java.log(
                     truncateMiddle(
                         messageSources
-                            .map(objectToString)
-                            .join("\n"),
+                        .map(objectToString)
+                        .join("\n"),
                         10000)
                 ));
             }
@@ -195,8 +183,8 @@ function PGIModules(kitName) {
                 java.longToast(java.log(
                     truncateMiddle(
                         messageSources
-                            .map(objectToString)
-                            .join("\n"),
+                        .map(objectToString)
+                        .join("\n"),
                         10000)
                 ));
             }
@@ -256,7 +244,7 @@ function PGIModules(kitName) {
             }
 
             /**
-             * 从initialSourceVariable批量添加动态属性到sourceVariable并之后引用到generalModule；默认不可枚举、配置
+             * 从initialSourceVariable批量添加动态属性到generalModule；默认不可枚举、配置
              */
             const descriptors = {};
             Object.keys(initialSourceVariable).forEach((key) => {
@@ -335,7 +323,7 @@ function PGIModules(kitName) {
                         (position ? `\n在${position}` : "")
                     ).trim();
                     if (isUserCall || isTerminal) {
-                        longToastLog(this.errorToString(error));
+                        longToastLog(errorToString(error));
                     }
                     throw error;
                 }
@@ -356,7 +344,7 @@ function PGIModules(kitName) {
              */
             function requestResponse({
                 url = null,
-                baseurl = null,
+                baseurl = generalModule.baseUrl,
                 relativePath = "",
                 method = "POST",
                 headers = {},
@@ -387,14 +375,14 @@ function PGIModules(kitName) {
                 return (
                     ((src instanceof jsoup.nodes.Element) ||
                         (src instanceof jsoup.select.Elements)) ?
+                    src :
+                    jsoup.Jsoup.parse(
+                        (!String(src).startsWith("http")) ?
                         src :
-                        jsoup.Jsoup.parse(
-                            (!String(src).startsWith("http")) ?
-                                src :
-                                requestResponse({
-                                    url: String(src)
-                                })
-                        )
+                        requestResponse({
+                            url: String(src)
+                        })
+                    )
                 );
             }
 
@@ -433,7 +421,7 @@ function PGIModules(kitName) {
             /**
              * Jsoup CSS文本节点列表选择
              * @param {string} selector - CSS选择器
-             * @return {java.lang.String}
+             * @return {List<java.lang.String>}
              * @throws 结果为空
              */
             function getStringListByJsoupCSS({
@@ -477,12 +465,7 @@ function PGIModules(kitName) {
              *内置浏览器打开当前网页
              */
             function enterCurrentWebpage() {
-                if (generalModule.doCheck) {
-                    java.startBrowser(baseUrl, "Zlibrary");
-                    longToastLog(`当前获取结果为空，已打开${baseUrl}确认网站状况，如网站正常请联系源作者`);
-                } else {
-                    return;
-                }
+                java.startBrowser(baseUrl, source.getTag());
             };
 
 
@@ -516,7 +499,7 @@ function PGIModules(kitName) {
                     return generalModule;
                 }
                 case "analyzeRuleModule": {
-                    return (function () {
+                    return (function() {
                         const analyzeRuleModule = Object.create(generalModule);
 
                         /**
@@ -524,23 +507,160 @@ function PGIModules(kitName) {
                          * =========================
                          */
 
+                        /**
+                         * 文本或选择器
+                         * 跨规则种类
+                         * @param {Object} getStringByOrParams
+                         * @param {java.lang.String|org.jsoup.nodes.Node} [getStringByOrParams.content] - 重新设置解析内容
+                         * @param {boolean} [getStringByOrParams.isUrl = false] - 标识期望结果是否为url，决定是否拼接相对地址
+                         * @param {Array<string>} [getStringByOrParams.selectors = []] - 选择器数组，应当显式标识规则类型
+                         * @return {java.lang.String} 文本结果
+                         */
+                        function getStringByOr({
+                            selectors = [],
+                            isUrl = false,
+                            content = null
+                        }) {
+                            function getStringByOrFn() {
+                                if (content) {
+                                    java.setContent(content, null);
+                                }
+
+                                for (let selector of selectors) {
+                                    let textResult = java.getString(selector, isUrl);
+                                    if (!textResult.isEmpty()) {
+                                        return textResult;
+                                    }
+                                }
+                                return "";
+                            }
+                            return wrapper({
+                                func: getStringByOrFn,
+                                msg: `尝试以${String(selectors)}获取文本`
+                            });
+                        }
+
+                        /**
+                         * 元素列表或选择器；跨规则种类
+                         * @param {Object} getElementsByOrParams
+                         * @param {Element} [getElementsByOrParams.content] - 重新设置解析内容
+                         * @param {boolean} [getElementsByOrParams.isUrl = false] - 标识期望结果是否为url，决定是否拼接相对地址
+                         * @param {Array<string>} [getElementsByOrParams.selectors = []] - 选择器数组，应当显式标识规则类型
+                         * @return {Elements}
+                         */
+                        function getElementsByOr({
+                            selectors = [],
+                            content = null
+                        }) {
+                            function getElementsByOrFn() {
+                                if (content) {
+                                    java.setContent(content, null);
+                                }
+
+                                for (let selector of selectors) {
+                                    let elements = java.getElements(selector);
+                                    if (elements && !elements.isEmpty()) {
+                                        return elements;
+                                    }
+                                }
+                                if (generalModule.doCheck) {
+                                    enterCurrentWebpage();
+                                    throw Error(`元素列表或选择器函数解析结果为空\n已尝试打开当前网页${baseUrl}确认网站状态`);
+                                }
+                            }
+                            return wrapper({
+                                func: getElementsByOrFn,
+                                msg: `尝试以${String(selectors)}获取元素列表`
+                            });
+                        }
+
+                        /**
+                         * 获取书籍信息列表；关键词筛选过滤
+                         * @param {Object} getBookInfoListParams
+                         * @param {Element} [getBookInfoListParams.content] - 重新设置解析内容
+                         * @param {string} [bookListUrl] - 书籍列表网址
+                         * @param {Array<string>} [getBookInfoListParams.xxxSelectors = []] - 选择器数组，应当显式标识规则类型
+                         * @return {Array<Object>} 书籍信息列表
+                         */
+                        function getBookInfoList({
+                            content = null,
+                            bookListUrl = null,
+                            bookSelectors = [],
+                            nameSelectors = [],
+                            authorSelectors = [],
+                            kindSelectors = [],
+                            wordCountSelectors = [],
+                            lastChapterSelectors = [],
+                            introSelectors = [],
+                            coverUrlSelectors = [],
+                            bookUrlSelectors = []
+                        }) {
+                            function getBookInfoListFn() {
+                                content = content || (bookListUrl ? requestResponse({
+                                    url: bookListUrl
+                                }) : null);
+                                let elements = Array.from(getElementsByOr({
+                                    selectors: bookSelectors,
+                                    content
+                                }));
+
+                                const items = [
+                                    ["name", nameSelectors],
+                                    ["author", authorSelectors],
+                                    ["kind", kindSelectors],
+                                    ["wordCount", wordCountSelectors],
+                                    ["lastChapter", lastChapterSelectors],
+                                    ["intro", introSelectors],
+                                    ["coverUrl", coverUrlSelectors],
+                                    ["bookUrl", bookUrlSelectors]
+                                ];
+
+                                let bookList = elements.map((element) => {
+                                    java.setContent(element, null);
+                                    const bookInfo = {};
+                                    items.forEach(([item, iSelector]) => {
+                                        bookInfo[item] = getStringByOr({
+                                            selectors: iSelector
+                                        });
+                                    });
+                                    return bookInfo;
+                                });
+
+
+                                if (generalModule.doCheck) {
+                                    let filter = generalModule.filter;
+                                    bookList = bookList.filter((bookInfo) => {
+                                        const bookInfoStr = JSON.stringify(bookInfo);
+                                        return filter.every((f) => {
+                                            return !RegExp(f, "i").test(bookInfoStr);
+                                        });
+                                    });
+                                }
+                                return bookList;
+                            }
+                            return wrapper({
+                                func: getBookInfoListFn,
+                                msg: `尝试从${truncateMiddle(content || bookListUrl || result, 2000)}中创建书籍列表`,
+                                isTerminal: true
+                            });
+                        }
 
 
 
                         Object.assign(analyzeRuleModule, {
                             //注册analyzeRuleModule独有方法属性
-                            /*
+
                             getStringByOr,
                             getElementsByOr,
                             getBookInfoList
-                            */
                         });
 
                         return analyzeRuleModule;
                     })();
-                } descriptors
+                }
+
                 case "analyzeUrlModule": {
-                    return (function () {
+                    return (function() {
                         const analyzeUrlModule = Object.create(generalModule);
 
                         /**
