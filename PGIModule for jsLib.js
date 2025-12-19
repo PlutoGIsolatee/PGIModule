@@ -34,6 +34,46 @@ function PGIModules(kitName) {
          */
 
         /**
+         * 柯里化
+         * @param {Function} fn
+         * @param {Object} [thisArg = null]
+         * @return {Function}
+         */
+        function curry(fn, thisArg = null) {
+            return function curried(...args) {
+                const completeArgs = args.filter(arg => arg !== curry._);
+
+                if (completeArgs.length >= fn.length && !args.includes(curry._)) {
+                    return fn.apply(thisArg, args);
+                }
+
+                return function(...args2) {
+                    const combinedArgs = [];
+                    let argsIndex = 0,
+                        args2Index = 0;
+
+
+                    for (let i = 0; i < args.length; i++) {
+                        if (args[i] === curry._ && args2Index < args2.length) {
+                            combinedArgs.push(args2[args2Index++]);
+                        } else {
+                            combinedArgs.push(args[i]);
+                        }
+                    }
+
+                    while (args2Index < args2.length) {
+                        combinedArgs.push(args2[args2Index++]);
+                    }
+
+                    return curried.apply(thisArg, combinedArgs);
+                };
+            };
+        }
+
+        curry._ = Symbol('curry_placeholder');
+
+
+        /**
          * 较安全的类型转换；对于JAVA对象调用其toString方法
          * @param {any} obj
          * @returns {string}
@@ -75,7 +115,7 @@ function PGIModules(kitName) {
          *@param {string} relativePath - 相对URL
          *@return {string} 绝对URL
          */
-        function getAbsoluteUrl(baseurl, relativePath) {
+        function getAbsoluteUrl(relativePath, baseurl) {
             if (baseurl.endsWith("/") && relativePath.startsWith("/")) {
                 return baseurl.slice(0, -1) + relativePath;
             } else if (!baseurl.endsWith("/") && !relativePath.startsWith("/")) {
@@ -148,7 +188,8 @@ function PGIModules(kitName) {
             objectToString,
             getAbsoluteUrl,
             truncateMiddle,
-            errorToString
+            errorToString,
+            curry
         };
 
 
@@ -260,6 +301,14 @@ function PGIModules(kitName) {
             Object.defineProperties(generalModule, descriptors);
 
             /**
+             * @param {string} relativePath
+             * @param {string} [baseurl = generalModule.baseUrl]
+             */
+            function getAbsoluteUrl(relativePath, baseurl = generalModule.baseUrl) {
+                return basicModule.getAbsoluteUrl(relativePath, baseurl);
+            }
+
+            /**
              * 包装函数，错误处理
              * @param {Object} wrapperParams
              * @param {Function} wrapperParams.func - 执行函数
@@ -359,7 +408,7 @@ function PGIModules(kitName) {
                         method,
                         useWebView
                     }, otherParams));
-                    url = getAbsoluteUrl(baseurl, `${relativePath},${urlparams}`);
+                    url = getAbsoluteUrl(`${relativePath},${urlparams}`, baseurl);
                 }
                 java.log(`尝试发送请求${url}`);
                 return java.ajax(url);
@@ -485,7 +534,8 @@ function PGIModules(kitName) {
                 getStringByJsoupCSS,
                 getStringListByJsoupCSS,
                 shellHTML,
-                enterCurrentWebpage
+                enterCurrentWebpage,
+                getAbsoluteUrl
             });
 
 
@@ -536,7 +586,8 @@ function PGIModules(kitName) {
                             }
                             return wrapper({
                                 func: getStringByOrFn,
-                                msg: `尝试以${String(selectors)}获取文本`
+                                msg: `尝试以${String(selectors)}获取文本`,
+                                log: false
                             });
                         }
 
