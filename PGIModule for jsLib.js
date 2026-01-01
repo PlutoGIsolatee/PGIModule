@@ -19,15 +19,18 @@ function PGIModules(kitName) {
     } = this;
     const here = this;
 
+    /**
+     * @todo 环境自动判断
+     */
     if (!kitName) {
         if (java.getElement) {
             kitName = "analyzeRuleModule";
         } else {
-            kitName = "analyzeUrlModule";
+            kitName = "generalModule";
         }
     }
 
-    return (function() {
+    return (function () {
         /**
          * 定义无依赖方法属性
          * =========================
@@ -47,7 +50,7 @@ function PGIModules(kitName) {
                     return fn.apply(thisArg, args);
                 }
 
-                return function(...args2) {
+                return function (...args2) {
                     const combinedArgs = [];
                     let argsIndex = 0,
                         args2Index = 0;
@@ -81,8 +84,8 @@ function PGIModules(kitName) {
         function objectToString(obj) {
             return (
                 (!obj || ((typeof obj) !== "object") || (obj instanceof Packages.java.lang.Object)) ?
-                String(obj) :
-                JSON.stringify(obj)
+                    String(obj) :
+                    JSON.stringify(obj)
             );
         }
 
@@ -144,19 +147,19 @@ function PGIModules(kitName) {
                     (err.name || "Error") +
                     (
                         (err.message !== undefined) ?
-                        (": " +
-                            truncateMiddle(
-                                err.message, maxMessageLength
-                            )) :
-                        ""
+                            (": " +
+                                truncateMiddle(
+                                    err.message, maxMessageLength
+                                )) :
+                            ""
                     ) +
                     (
                         (err.extraMessage !== undefined) ?
-                        ("\n" +
-                            truncateMiddle(
-                                err.extraMessage, maxMessageLength
-                            )) :
-                        ""
+                            ("\n" +
+                                truncateMiddle(
+                                    err.extraMessage, maxMessageLength
+                                )) :
+                            ""
                     )
                 );
                 return (str);
@@ -193,7 +196,7 @@ function PGIModules(kitName) {
         };
 
 
-        return (function() {
+        return (function () {
 
             const generalModule = Object.create(basicModule);
 
@@ -210,8 +213,8 @@ function PGIModules(kitName) {
                 java.toast(java.log(
                     truncateMiddle(
                         messageSources
-                        .map(objectToString)
-                        .join("\n"),
+                            .map(objectToString)
+                            .join("\n"),
                         10000)
                 ));
             }
@@ -224,8 +227,8 @@ function PGIModules(kitName) {
                 java.longToast(java.log(
                     truncateMiddle(
                         messageSources
-                        .map(objectToString)
-                        .join("\n"),
+                            .map(objectToString)
+                            .join("\n"),
                         10000)
                 ));
             }
@@ -282,30 +285,6 @@ function PGIModules(kitName) {
             function getVariableValue(key) {
                 var va = checkVariable();
                 return va[key];
-            }
-
-            /**
-             * 从initialSourceVariable批量添加动态属性到generalModule；默认不可枚举、配置
-             */
-            const descriptors = {};
-            Object.keys(initialSourceVariable).forEach((key) => {
-                descriptors[key] = {
-                    get() {
-                        return getVariableValue(key);
-                    },
-                    set(value) {
-                        setVariableValue(key, value);
-                    }
-                };
-            });
-            Object.defineProperties(generalModule, descriptors);
-
-            /**
-             * @param {string} relativePath
-             * @param {string} [baseurl = generalModule.baseUrl]
-             */
-            function getAbsoluteUrl(relativePath, baseurl = generalModule.baseUrl) {
-                return basicModule.getAbsoluteUrl(relativePath, baseurl);
             }
 
             /**
@@ -424,14 +403,14 @@ function PGIModules(kitName) {
                 return (
                     ((src instanceof jsoup.nodes.Element) ||
                         (src instanceof jsoup.select.Elements)) ?
-                    src :
-                    jsoup.Jsoup.parse(
-                        (!String(src).startsWith("http")) ?
                         src :
-                        requestResponse({
-                            url: String(src)
-                        })
-                    )
+                        jsoup.Jsoup.parse(
+                            (!String(src).startsWith("http")) ?
+                                src :
+                                requestResponse({
+                                    url: String(src)
+                                })
+                        )
                 );
             }
 
@@ -511,12 +490,64 @@ function PGIModules(kitName) {
 
 
             /**
-             *内置浏览器打开当前网页
+             * 内置浏览器打开当前网页
              */
             function enterCurrentWebpage() {
                 java.startBrowser(baseUrl, source.getTag());
             };
 
+            /**
+             * 打开书籍详情页
+             */
+            function enterCurrentBook() {
+                wrapper({
+                    func: function enterCurrentWebpageFn() {
+                        java.startBrowser(book?.bookUrl || null, book?.name)
+                    },
+                    isUserCall: true,
+                    msg: "尝试打开当前网页，请确认是否在书籍详情页面"
+                });
+            }
+
+            /**
+             * @param {string} relativePath
+             * @param {string} [baseurl = generalModule.baseUrl]
+             */
+            function getAbsoluteUrl(relativePath, baseurl = generalModule.baseUrl) {
+                return basicModule.getAbsoluteUrl(relativePath, baseurl);
+            }
+
+            /**
+             * 从initialSourceVariable批量添加动态属性到generalModule；默认不可枚举、配置
+             */
+            const descriptors = {};
+            Object.keys(initialSourceVariable).forEach((key) => {
+                descriptors[key] = {
+                    get() {
+                        return getVariableValue(key);
+                    },
+                    set(value) {
+                        setVariableValue(key, value);
+                    }
+                };
+            });
+            Object.defineProperties(generalModule, descriptors);
+
+            /**
+             * 从登录信息批量添加动态属性到generalModule；默认不可枚举、配置;在loginUrlModule中会被对应即时属性屏蔽
+             */
+            const descriptors2 = {};
+            Object.keys(source.getLoginInfoMap()).forEach((key) => {
+                descriptors2[key] = {
+                    get() {
+                        return getVariableValue(key);
+                    },
+                    set(value) {
+                        setVariableValue(key, value);
+                    }
+                };
+            });
+            Object.defineProperties(generalModule, descriptors2);
 
             Object.assign(generalModule, {
                 //注册使用通用API方法属性
@@ -535,198 +566,210 @@ function PGIModules(kitName) {
                 getStringListByJsoupCSS,
                 shellHTML,
                 enterCurrentWebpage,
-                getAbsoluteUrl
+                getAbsoluteUrl,
+                enterCurrentBook
             });
 
 
 
 
             switch (kitName) {
-                case "basicModule": {
+                case "basicModule":
                     return basicModule;
-                }
-                case "generalModule": {
+                case "generalModule":
                     return generalModule;
-                }
-                case "analyzeRuleModule": {
-                    return (function() {
-                        const analyzeRuleModule = Object.create(generalModule);
+                case "analyzeRule": {
 
-                        /**
-                         * 定义analyzeRuleModule独有方法属性
-                         * =========================
-                         */
+                    const analyzeRuleModule = Object.create(generalModule);
 
-                        /**
-                         * 文本或选择器
-                         * 跨规则种类
-                         * @param {Object} getStringByOrParams
-                         * @param {java.lang.String|org.jsoup.nodes.Node} [getStringByOrParams.content] - 重新设置解析内容
-                         * @param {boolean} [getStringByOrParams.isUrl = false] - 标识期望结果是否为url，决定是否拼接相对地址
-                         * @param {Array<string>} [getStringByOrParams.selectors = []] - 选择器数组，应当显式标识规则类型
-                         * @return {java.lang.String} 文本结果
-                         */
-                        function getStringByOr({
-                            selectors = [],
-                            isUrl = false,
-                            content = null
-                        }) {
-                            function getStringByOrFn() {
-                                if (content) {
-                                    java.setContent(content, null);
-                                }
+                    /**
+                     * 定义analyzeRuleModule独有方法属性
+                     * =========================
+                     */
 
-                                for (let selector of selectors) {
-                                    let textResult = java.getString(selector, isUrl);
-                                    if (!textResult.isEmpty()) {
-                                        return textResult;
-                                    }
-                                }
-                                return "";
+                    /**
+                     * 文本或选择器
+                     * 跨规则种类
+                     * @param {Object} getStringByOrParams
+                     * @param {java.lang.String|org.jsoup.nodes.Node} [getStringByOrParams.content] - 重新设置解析内容
+                     * @param {boolean} [getStringByOrParams.isUrl = false] - 标识期望结果是否为url，决定是否拼接相对地址
+                     * @param {Array<string>} [getStringByOrParams.selectors = []] - 选择器数组，应当显式标识规则类型
+                     * @return {java.lang.String} 文本结果
+                     */
+                    function getStringByOr({
+                        selectors = [],
+                        isUrl = false,
+                        content = null
+                    }) {
+                        function getStringByOrFn() {
+                            if (content) {
+                                java.setContent(content, null);
                             }
-                            return wrapper({
-                                func: getStringByOrFn,
-                                msg: `尝试以${String(selectors)}获取文本`,
-                                log: false
-                            });
-                        }
 
-                        /**
-                         * 元素列表或选择器；跨规则种类
-                         * @param {Object} getElementsByOrParams
-                         * @param {Element} [getElementsByOrParams.content] - 重新设置解析内容
-                         * @param {boolean} [getElementsByOrParams.isUrl = false] - 标识期望结果是否为url，决定是否拼接相对地址
-                         * @param {Array<string>} [getElementsByOrParams.selectors = []] - 选择器数组，应当显式标识规则类型
-                         * @return {Elements}
-                         */
-                        function getElementsByOr({
-                            selectors = [],
-                            content = null
-                        }) {
-                            function getElementsByOrFn() {
-                                if (content) {
-                                    java.setContent(content, null);
-                                }
-
-                                for (let selector of selectors) {
-                                    let elements = java.getElements(selector);
-                                    if (elements && !elements.isEmpty()) {
-                                        return elements;
-                                    }
-                                }
-                                if (generalModule.doCheck) {
-                                    enterCurrentWebpage();
-                                    throw Error(`元素列表或选择器函数解析结果为空\n已尝试打开当前网页${baseUrl}确认网站状态`);
+                            for (let selector of selectors) {
+                                let textResult = java.getString(selector, isUrl);
+                                if (!textResult.isEmpty()) {
+                                    return textResult;
                                 }
                             }
-                            return wrapper({
-                                func: getElementsByOrFn,
-                                msg: `尝试以${String(selectors)}获取元素列表`
-                            });
+                            return "";
                         }
+                        return wrapper({
+                            func: getStringByOrFn,
+                            msg: `尝试以${String(selectors)}获取文本`,
+                            log: false
+                        });
+                    }
 
-                        /**
-                         * 获取书籍信息列表；关键词筛选过滤
-                         * @param {Object} getBookInfoListParams
-                         * @param {Element} [getBookInfoListParams.content] - 重新设置解析内容
-                         * @param {string} [bookListUrl] - 书籍列表网址
-                         * @param {Array<string>} [getBookInfoListParams.xxxSelectors = []] - 选择器数组，应当显式标识规则类型
-                         * @return {Array<Object>} 书籍信息列表
-                         */
-                        function getBookInfoList({
-                            content = null,
-                            bookListUrl = null,
-                            bookSelectors = [],
-                            nameSelectors = [],
-                            authorSelectors = [],
-                            kindSelectors = [],
-                            wordCountSelectors = [],
-                            lastChapterSelectors = [],
-                            introSelectors = [],
-                            coverUrlSelectors = [],
-                            bookUrlSelectors = []
-                        }) {
-                            function getBookInfoListFn() {
-                                content = content || (bookListUrl ? requestResponse({
-                                    url: bookListUrl
-                                }) : null);
-                                let elements = Array.from(getElementsByOr({
-                                    selectors: bookSelectors,
-                                    content
-                                }));
+                    /**
+                     * 元素列表或选择器；跨规则种类
+                     * @param {Object} getElementsByOrParams
+                     * @param {Element} [getElementsByOrParams.content] - 重新设置解析内容
+                     * @param {boolean} [getElementsByOrParams.isUrl = false] - 标识期望结果是否为url，决定是否拼接相对地址
+                     * @param {Array<string>} [getElementsByOrParams.selectors = []] - 选择器数组，应当显式标识规则类型
+                     * @return {Elements}
+                     */
+                    function getElementsByOr({
+                        selectors = [],
+                        content = null
+                    }) {
+                        function getElementsByOrFn() {
+                            if (content) {
+                                java.setContent(content, null);
+                            }
 
-                                const items = [
-                                    ["name", nameSelectors],
-                                    ["author", authorSelectors],
-                                    ["kind", kindSelectors],
-                                    ["wordCount", wordCountSelectors],
-                                    ["lastChapter", lastChapterSelectors],
-                                    ["intro", introSelectors],
-                                    ["coverUrl", coverUrlSelectors],
-                                    ["bookUrl", bookUrlSelectors]
-                                ];
+                            for (let selector of selectors) {
+                                let elements = java.getElements(selector);
+                                if (elements && !elements.isEmpty()) {
+                                    return elements;
+                                }
+                            }
+                            if (generalModule.doCheck) {
+                                enterCurrentWebpage();
+                                throw Error(`元素列表或选择器函数解析结果为空\n已尝试打开当前网页${baseUrl}确认网站状态`);
+                            }
+                        }
+                        return wrapper({
+                            func: getElementsByOrFn,
+                            msg: `尝试以${String(selectors)}获取元素列表`
+                        });
+                    }
 
-                                let bookList = elements.map((element) => {
-                                    java.setContent(element, null);
-                                    const bookInfo = {};
-                                    items.forEach(([item, iSelector]) => {
-                                        bookInfo[item] = getStringByOr({
-                                            selectors: iSelector
-                                        });
+                    /**
+                     * 获取书籍信息列表；关键词筛选过滤
+                     * @param {Object} getBookInfoListParams
+                     * @param {Element} [getBookInfoListParams.content] - 重新设置解析内容
+                     * @param {string} [bookListUrl] - 书籍列表网址
+                     * @param {Array<string>} [getBookInfoListParams.xxxSelectors = []] - 选择器数组，应当显式标识规则类型
+                     * @return {Array<Object>} 书籍信息列表
+                     */
+                    function getBookInfoList({
+                        content = null,
+                        bookListUrl = null,
+                        bookSelectors = [],
+                        nameSelectors = [],
+                        authorSelectors = [],
+                        kindSelectors = [],
+                        wordCountSelectors = [],
+                        lastChapterSelectors = [],
+                        introSelectors = [],
+                        coverUrlSelectors = [],
+                        bookUrlSelectors = []
+                    }) {
+                        function getBookInfoListFn() {
+                            content = content || (bookListUrl ? requestResponse({
+                                url: bookListUrl
+                            }) : null);
+                            let elements = Array.from(getElementsByOr({
+                                selectors: bookSelectors,
+                                content
+                            }));
+
+                            const items = [
+                                ["name", nameSelectors],
+                                ["author", authorSelectors],
+                                ["kind", kindSelectors],
+                                ["wordCount", wordCountSelectors],
+                                ["lastChapter", lastChapterSelectors],
+                                ["intro", introSelectors],
+                                ["coverUrl", coverUrlSelectors],
+                                ["bookUrl", bookUrlSelectors]
+                            ];
+
+                            let bookList = elements.map((element) => {
+                                java.setContent(element, null);
+                                const bookInfo = {};
+                                items.forEach(([item, iSelector]) => {
+                                    bookInfo[item] = getStringByOr({
+                                        selectors: iSelector
                                     });
-                                    return bookInfo;
                                 });
-
-
-                                if (generalModule.doCheck) {
-                                    let filter = generalModule.filter;
-                                    bookList = bookList.filter((bookInfo) => {
-                                        const bookInfoStr = JSON.stringify(bookInfo);
-                                        return filter.every((f) => {
-                                            return !RegExp(f, "i").test(bookInfoStr);
-                                        });
-                                    });
-                                }
-                                return bookList;
-                            }
-                            return wrapper({
-                                func: getBookInfoListFn,
-                                msg: `尝试从${truncateMiddle(content || bookListUrl || result, 2000)}中创建书籍列表`,
-                                isTerminal: true
+                                return bookInfo;
                             });
+
+
+                            if (generalModule.doCheck) {
+                                let filter = generalModule.filter;
+                                bookList = bookList.filter((bookInfo) => {
+                                    const bookInfoStr = JSON.stringify(bookInfo);
+                                    return filter.every((f) => {
+                                        return !RegExp(f, "i").test(bookInfoStr);
+                                    });
+                                });
+                            }
+                            return bookList;
                         }
-
-
-
-                        Object.assign(analyzeRuleModule, {
-                            //注册analyzeRuleModule独有方法属性
-
-                            getStringByOr,
-                            getElementsByOr,
-                            getBookInfoList
+                        return wrapper({
+                            func: getBookInfoListFn,
+                            msg: `尝试从${truncateMiddle(content || bookListUrl || result, 2000)}中创建书籍列表`,
+                            isTerminal: true
                         });
+                    }
 
-                        return analyzeRuleModule;
-                    })();
+
+
+                    Object.assign(analyzeRuleModule, {
+                        //注册analyzeRuleModule独有方法属性
+
+                        getStringByOr,
+                        getElementsByOr,
+                        getBookInfoList
+                    });
+
+                    return analyzeRuleModule;
                 }
+                case "loginUrl": {
+                    function getCurrentLoginInfo(name) {
+                        return result.get(name);
+                    }
 
-                case "analyzeUrlModule": {
-                    return (function() {
-                        const analyzeUrlModule = Object.create(generalModule);
+                    const loginUrlModule = Object.create(generalModule);
 
-                        /**
-                         * 定义analyzeUrlModule独有方法属性
-                         * =========================
-                         */
+                    /**
+                     * 从登录result批量添加动态属性到loginUrlModule；默认不可枚举、配置；会屏蔽来自generalModule中的同名属性
+                     */
+                    const descriptors = {};
+                    Object.keys(result).forEach((key) => {
+                        descriptors[key] = {
+                            get() {
+                                return getVariableValue(key);
+                            },
+                            set(value) {
+                                setVariableValue(key, value);
+                            }
+                        };
+                    });
+                    Object.defineProperties(loginUrlModule, descriptors);
 
-                        Object.assign(analyzeUrlModule, {
-                            //注册analyzeUrlModule独有方法属性
+                    Object.assign(loginUrlModule, {
+                        //注册loginUrlModule独有方法属性
+                        getCurrentLoginInfo
+                    })
 
-                        });
-
-                        return analyzeUrlModule;
-                    })();
+                    return loginUrlModule;
                 }
+                default:
+                    return generalModule;
             }
         })();
     })();
