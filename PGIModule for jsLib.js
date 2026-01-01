@@ -1,6 +1,11 @@
 /**
- * 
- * @param {string} [kitName] - 为空时自动判断环境创建模块实例
+ * @file smart js module for legado
+ * @version 260101.1
+ * @author PlutoGIsolatee <plutoqweguo@126.com>
+ * @license LGPL-2.1.only
+ */
+
+/** @param {string} [kitName] - 为空时自动判断环境创建模块实例
  * @returns {Object}
  */
 function PGIModules(kitName) {
