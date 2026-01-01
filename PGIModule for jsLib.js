@@ -29,9 +29,9 @@ function PGIModules(kitName) {
      */
     if (!kitName) {
         if (java.getElement) {
-            kitName = "analyzeRuleModule";
+            kitName = "analyzeRule";
         } else {
-            kitName = "generalModule";
+            kitName = "general";
         }
     }
 
@@ -579,199 +579,202 @@ function PGIModules(kitName) {
 
 
             switch (kitName) {
-                case "basicModule":
+                case "basic":
                     return basicModule;
-                case "generalModule":
+                case "general":
                     return generalModule;
                 case "analyzeRule": {
+                    return (function () {
+                        const analyzeRuleModule = Object.create(generalModule);
 
-                    const analyzeRuleModule = Object.create(generalModule);
+                        /**
+                         * 定义analyzeRuleModule独有方法属性
+                         * =========================
+                         */
 
-                    /**
-                     * 定义analyzeRuleModule独有方法属性
-                     * =========================
-                     */
-
-                    /**
-                     * 文本或选择器
-                     * 跨规则种类
-                     * @param {Object} getStringByOrParams
-                     * @param {java.lang.String|org.jsoup.nodes.Node} [getStringByOrParams.content] - 重新设置解析内容
-                     * @param {boolean} [getStringByOrParams.isUrl = false] - 标识期望结果是否为url，决定是否拼接相对地址
-                     * @param {Array<string>} [getStringByOrParams.selectors = []] - 选择器数组，应当显式标识规则类型
-                     * @return {java.lang.String} 文本结果
-                     */
-                    function getStringByOr({
-                        selectors = [],
-                        isUrl = false,
-                        content = null
-                    }) {
-                        function getStringByOrFn() {
-                            if (content) {
-                                java.setContent(content, null);
-                            }
-
-                            for (let selector of selectors) {
-                                let textResult = java.getString(selector, isUrl);
-                                if (!textResult.isEmpty()) {
-                                    return textResult;
+                        /**
+                         * 文本或选择器
+                         * 跨规则种类
+                         * @param {Object} getStringByOrParams
+                         * @param {java.lang.String|org.jsoup.nodes.Node} [getStringByOrParams.content] - 重新设置解析内容
+                         * @param {boolean} [getStringByOrParams.isUrl = false] - 标识期望结果是否为url，决定是否拼接相对地址
+                         * @param {Array<string>} [getStringByOrParams.selectors = []] - 选择器数组，应当显式标识规则类型
+                         * @return {java.lang.String} 文本结果
+                         */
+                        function getStringByOr({
+                            selectors = [],
+                            isUrl = false,
+                            content = null
+                        }) {
+                            function getStringByOrFn() {
+                                if (content) {
+                                    java.setContent(content, null);
                                 }
-                            }
-                            return "";
-                        }
-                        return wrapper({
-                            func: getStringByOrFn,
-                            msg: `尝试以${String(selectors)}获取文本`,
-                            log: false
-                        });
-                    }
 
-                    /**
-                     * 元素列表或选择器；跨规则种类
-                     * @param {Object} getElementsByOrParams
-                     * @param {Element} [getElementsByOrParams.content] - 重新设置解析内容
-                     * @param {boolean} [getElementsByOrParams.isUrl = false] - 标识期望结果是否为url，决定是否拼接相对地址
-                     * @param {Array<string>} [getElementsByOrParams.selectors = []] - 选择器数组，应当显式标识规则类型
-                     * @return {Elements}
-                     */
-                    function getElementsByOr({
-                        selectors = [],
-                        content = null
-                    }) {
-                        function getElementsByOrFn() {
-                            if (content) {
-                                java.setContent(content, null);
-                            }
-
-                            for (let selector of selectors) {
-                                let elements = java.getElements(selector);
-                                if (elements && !elements.isEmpty()) {
-                                    return elements;
+                                for (let selector of selectors) {
+                                    let textResult = java.getString(selector, isUrl);
+                                    if (!textResult.isEmpty()) {
+                                        return textResult;
+                                    }
                                 }
+                                return "";
                             }
-                            if (generalModule.doCheck) {
-                                enterCurrentWebpage();
-                                throw Error(`元素列表或选择器函数解析结果为空\n已尝试打开当前网页${baseUrl}确认网站状态`);
-                            }
-                        }
-                        return wrapper({
-                            func: getElementsByOrFn,
-                            msg: `尝试以${String(selectors)}获取元素列表`
-                        });
-                    }
-
-                    /**
-                     * 获取书籍信息列表；关键词筛选过滤
-                     * @param {Object} getBookInfoListParams
-                     * @param {Element} [getBookInfoListParams.content] - 重新设置解析内容
-                     * @param {string} [bookListUrl] - 书籍列表网址
-                     * @param {Array<string>} [getBookInfoListParams.xxxSelectors = []] - 选择器数组，应当显式标识规则类型
-                     * @return {Array<Object>} 书籍信息列表
-                     */
-                    function getBookInfoList({
-                        content = null,
-                        bookListUrl = null,
-                        bookSelectors = [],
-                        nameSelectors = [],
-                        authorSelectors = [],
-                        kindSelectors = [],
-                        wordCountSelectors = [],
-                        lastChapterSelectors = [],
-                        introSelectors = [],
-                        coverUrlSelectors = [],
-                        bookUrlSelectors = []
-                    }) {
-                        function getBookInfoListFn() {
-                            content = content || (bookListUrl ? requestResponse({
-                                url: bookListUrl
-                            }) : null);
-                            let elements = Array.from(getElementsByOr({
-                                selectors: bookSelectors,
-                                content
-                            }));
-
-                            const items = [
-                                ["name", nameSelectors],
-                                ["author", authorSelectors],
-                                ["kind", kindSelectors],
-                                ["wordCount", wordCountSelectors],
-                                ["lastChapter", lastChapterSelectors],
-                                ["intro", introSelectors],
-                                ["coverUrl", coverUrlSelectors],
-                                ["bookUrl", bookUrlSelectors]
-                            ];
-
-                            let bookList = elements.map((element) => {
-                                java.setContent(element, null);
-                                const bookInfo = {};
-                                items.forEach(([item, iSelector]) => {
-                                    bookInfo[item] = getStringByOr({
-                                        selectors: iSelector
-                                    });
-                                });
-                                return bookInfo;
+                            return wrapper({
+                                func: getStringByOrFn,
+                                msg: `尝试以${String(selectors)}获取文本`,
+                                log: false
                             });
-
-
-                            if (generalModule.doCheck) {
-                                let filter = generalModule.filter;
-                                bookList = bookList.filter((bookInfo) => {
-                                    const bookInfoStr = JSON.stringify(bookInfo);
-                                    return filter.every((f) => {
-                                        return !RegExp(f, "i").test(bookInfoStr);
-                                    });
-                                });
-                            }
-                            return bookList;
                         }
-                        return wrapper({
-                            func: getBookInfoListFn,
-                            msg: `尝试从${truncateMiddle(content || bookListUrl || result, 2000)}中创建书籍列表`,
-                            isTerminal: true
+
+                        /**
+                         * 元素列表或选择器；跨规则种类
+                         * @param {Object} getElementsByOrParams
+                         * @param {Element} [getElementsByOrParams.content] - 重新设置解析内容
+                         * @param {boolean} [getElementsByOrParams.isUrl = false] - 标识期望结果是否为url，决定是否拼接相对地址
+                         * @param {Array<string>} [getElementsByOrParams.selectors = []] - 选择器数组，应当显式标识规则类型
+                         * @return {Elements}
+                         */
+                        function getElementsByOr({
+                            selectors = [],
+                            content = null
+                        }) {
+                            function getElementsByOrFn() {
+                                if (content) {
+                                    java.setContent(content, null);
+                                }
+
+                                for (let selector of selectors) {
+                                    let elements = java.getElements(selector);
+                                    if (elements && !elements.isEmpty()) {
+                                        return elements;
+                                    }
+                                }
+                                if (generalModule.doCheck) {
+                                    enterCurrentWebpage();
+                                    throw Error(`元素列表或选择器函数解析结果为空\n已尝试打开当前网页${baseUrl}确认网站状态`);
+                                }
+                            }
+                            return wrapper({
+                                func: getElementsByOrFn,
+                                msg: `尝试以${String(selectors)}获取元素列表`
+                            });
+                        }
+
+                        /**
+                         * 获取书籍信息列表；关键词筛选过滤
+                         * @param {Object} getBookInfoListParams
+                         * @param {Element} [getBookInfoListParams.content] - 重新设置解析内容
+                         * @param {string} [bookListUrl] - 书籍列表网址
+                         * @param {Array<string>} [getBookInfoListParams.xxxSelectors = []] - 选择器数组，应当显式标识规则类型
+                         * @return {Array<Object>} 书籍信息列表
+                         */
+                        function getBookInfoList({
+                            content = null,
+                            bookListUrl = null,
+                            bookSelectors = [],
+                            nameSelectors = [],
+                            authorSelectors = [],
+                            kindSelectors = [],
+                            wordCountSelectors = [],
+                            lastChapterSelectors = [],
+                            introSelectors = [],
+                            coverUrlSelectors = [],
+                            bookUrlSelectors = []
+                        }) {
+                            function getBookInfoListFn() {
+                                content = content || (bookListUrl ? requestResponse({
+                                    url: bookListUrl
+                                }) : null);
+                                let elements = Array.from(getElementsByOr({
+                                    selectors: bookSelectors,
+                                    content
+                                }));
+
+                                const items = [
+                                    ["name", nameSelectors],
+                                    ["author", authorSelectors],
+                                    ["kind", kindSelectors],
+                                    ["wordCount", wordCountSelectors],
+                                    ["lastChapter", lastChapterSelectors],
+                                    ["intro", introSelectors],
+                                    ["coverUrl", coverUrlSelectors],
+                                    ["bookUrl", bookUrlSelectors]
+                                ];
+
+                                let bookList = elements.map((element) => {
+                                    java.setContent(element, null);
+                                    const bookInfo = {};
+                                    items.forEach(([item, iSelector]) => {
+                                        bookInfo[item] = getStringByOr({
+                                            selectors: iSelector
+                                        });
+                                    });
+                                    return bookInfo;
+                                });
+
+
+                                if (generalModule.doCheck) {
+                                    let filter = generalModule.filter;
+                                    bookList = bookList.filter((bookInfo) => {
+                                        const bookInfoStr = JSON.stringify(bookInfo);
+                                        return filter.every((f) => {
+                                            return !RegExp(f, "i").test(bookInfoStr);
+                                        });
+                                    });
+                                }
+                                return bookList;
+                            }
+                            return wrapper({
+                                func: getBookInfoListFn,
+                                msg: `尝试从${truncateMiddle(content || bookListUrl || result, 2000)}中创建书籍列表`,
+                                isTerminal: true
+                            });
+                        }
+
+
+
+                        Object.assign(analyzeRuleModule, {
+                            //注册analyzeRuleModule独有方法属性
+
+                            getStringByOr,
+                            getElementsByOr,
+                            getBookInfoList
                         });
-                    }
 
-
-
-                    Object.assign(analyzeRuleModule, {
-                        //注册analyzeRuleModule独有方法属性
-
-                        getStringByOr,
-                        getElementsByOr,
-                        getBookInfoList
-                    });
-
-                    return analyzeRuleModule;
+                        return analyzeRuleModule;
+                    })();
                 }
                 case "loginUrl": {
-                    function getCurrentLoginInfo(name) {
-                        return result.get(name);
-                    }
+                    return (function () {
+                        function getCurrentLoginInfo(name) {
+                            return result.get(name);
+                        }
 
-                    const loginUrlModule = Object.create(generalModule);
+                        const loginUrlModule = Object.create(generalModule);
 
-                    /**
-                     * 从登录result批量添加动态属性到loginUrlModule；默认不可枚举、配置；会屏蔽来自generalModule中的同名属性
-                     */
-                    const descriptors = {};
-                    Object.keys(result).forEach((key) => {
-                        descriptors[key] = {
-                            get() {
-                                return getVariableValue(key);
-                            },
-                            set(value) {
-                                setVariableValue(key, value);
-                            }
-                        };
-                    });
-                    Object.defineProperties(loginUrlModule, descriptors);
+                        /**
+                         * 从登录result批量添加动态属性到loginUrlModule；默认不可枚举、配置；会屏蔽来自generalModule中的同名属性
+                         */
+                        const descriptors = {};
+                        Object.keys(result).forEach((key) => {
+                            descriptors[key] = {
+                                get() {
+                                    return getVariableValue(key);
+                                },
+                                set(value) {
+                                    setVariableValue(key, value);
+                                }
+                            };
+                        });
+                        Object.defineProperties(loginUrlModule, descriptors);
 
-                    Object.assign(loginUrlModule, {
-                        //注册loginUrlModule独有方法属性
-                        getCurrentLoginInfo
-                    })
+                        Object.assign(loginUrlModule, {
+                            //注册loginUrlModule独有方法属性
+                            getCurrentLoginInfo
+                        })
 
-                    return loginUrlModule;
+                        return loginUrlModule;
+                    })();
                 }
                 default:
                     return generalModule;
