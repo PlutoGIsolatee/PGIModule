@@ -42,7 +42,46 @@ function PGIModules(kitName) {
          */
 
         /**
-         * 柯里化
+         * 新增或修改自有数据属性
+         * @param {Object} target 
+         * @param {Object} source 
+         * @param {Object} [descriptor = {}] 数据属性描述符; 应用于全体; 默认{enumerable: false, configurable: false, writable: false}
+         */
+        function defineDataProperties(target, source, descriptor = {}) {
+            const des = {};
+            Object.keys(source).forEach((key) => {
+                des[key] = { value: source[key] };
+                Object.assign(des[key], descriptor);
+            });
+            Object.defineProperties(target, des);
+        }
+
+        /**
+         * 新增或修改自有存取器属性
+         * @param {Object} target 
+         * @param {Object} source 
+         * @param {Function} [getter = Function.prototype] - 存取器getter函数；参数key
+         * @param {Function} [setter = Function.prototype] - 存取器setter函数；参数key、value
+         * @param {Object} [descriptor = {}] 存取器属性描述符; 应用于全体; 默认{enumerable: false, configurable: false}
+         */
+        function defineAccessorProperties(target, source, getter = Function.prototype, setter = Function.prototype, descriptor = {}) {
+            const des = {};
+            Object.keys(source).forEach((key) => {
+                des[key] = {
+                    get() {
+                        return getter(key);
+                    },
+                    set(value) {
+                        setter(key, value);
+                    }
+                };
+                Object.assign(des[key], descriptor);
+            });
+            Object.defineProperties(target, des);
+        }
+
+        /**
+         * 柯里化; 支持占位符curry._
          * @param {Function} fn
          * @param {Object} [thisArg = null]
          * @return {Function}
@@ -190,15 +229,22 @@ function PGIModules(kitName) {
         }
 
 
-
-        const basicModule = {
-            //注册无依赖方法属性
-            objectToString,
-            getAbsolutePath,
-            truncateMiddle,
-            errorToString,
-            curry
-        };
+        function basicModule() {
+            //留待扩展
+        }
+        defineDataProperties(
+            basicModule,
+            {
+                //注册无依赖方法属性
+                objectToString,
+                getAbsolutePath,
+                truncateMiddle,
+                errorToString,
+                curry,
+                defineAccessorProperties,
+                defineDataProperties
+            }
+        );
 
 
         return (function () {
@@ -545,58 +591,49 @@ function PGIModules(kitName) {
             /**
              * 从initialSourceVariable批量添加动态属性到generalModule；默认不可枚举、配置
              */
-            const descriptors = {};
-            Object.keys(initialSourceVariable).forEach((key) => {
-                descriptors[key] = {
-                    get() {
-                        return getLoginInfo(key);
-                    },
-                    set(value) {
-                        setLoginInfo(key, value);
-                    }
-                };
-            });
-            Object.defineProperties(generalModule, descriptors);
+
+            defineAccessorProperties(
+                generalModule,
+                initialSourceVariable,
+                getVariableValue,
+                setVariableValue
+            );
 
             /**
              * 从登录信息批量添加动态属性到generalModule；默认不可枚举、配置;在loginUrlModule中会被对应即时属性屏蔽
              */
-            const descriptors2 = {};
-            Object.keys(source.getLoginInfoMap()).forEach((key) => {
-                descriptors2[key] = {
-                    get() {
-                        return getVariableValue(key);
-                    },
-                    set(value) {
-                        setVariableValue(key, value);
-                    }
-                };
-            });
-            Object.defineProperties(generalModule, descriptors2);
+            defineAccessorProperties(
+                generalModule,
+                source.getLoginInfoMap(),
+                getLoginInfo,
+                setLoginInfo
+            );
 
-            Object.assign(generalModule, {
-                //注册使用通用API方法属性
-                initialSourceVariable,
-                checkVariable,
-                setVariableValue,
-                getVariableValue,
-                longToastLog,
-                toastLog,
-                wrapper,
-                requestResponse,
-                jsoupParse,
-                getElementsByJsoupCSS,
-                getElementByJsoupCSS,
-                getStringByJsoupCSS,
-                getStringListByJsoupCSS,
-                shellHTML,
-                enterCurrentWebpage,
-                getAbsolutePath,
-                enterCurrentBook,
-                setLoginInfo,
-                getLoginInfo
-            });
-
+            defineDataProperties(
+                generalModule,
+                {
+                    //注册使用通用API方法属性
+                    initialSourceVariable,
+                    checkVariable,
+                    setVariableValue,
+                    getVariableValue,
+                    longToastLog,
+                    toastLog,
+                    wrapper,
+                    requestResponse,
+                    jsoupParse,
+                    getElementsByJsoupCSS,
+                    getElementByJsoupCSS,
+                    getStringByJsoupCSS,
+                    getStringListByJsoupCSS,
+                    shellHTML,
+                    enterCurrentWebpage,
+                    getAbsolutePath,
+                    enterCurrentBook,
+                    setLoginInfo,
+                    getLoginInfo
+                }
+            );
 
 
 
@@ -688,7 +725,7 @@ function PGIModules(kitName) {
                          * @param {Element} [getBookInfoListParams.content] - 重新设置解析内容
                          * @param {string} [bookListUrl] - 书籍列表网址
                          * @param {Array<string>} [getBookInfoListParams.xxxSelectors = []] - 选择器数组，应当显式标识规则类型
-                         * @return {Array<Object>} 书籍信息列表
+                         * @returns {Array<Object>} 书籍信息列表
                          */
                         function getBookInfoList({
                             content = null,
@@ -754,14 +791,16 @@ function PGIModules(kitName) {
                         }
 
 
+                        defineDataProperties(
+                            analyzeRuleModule,
+                            {
+                                //注册analyzeRuleModule独有方法属性
 
-                        Object.assign(analyzeRuleModule, {
-                            //注册analyzeRuleModule独有方法属性
-
-                            getStringByOr,
-                            getElementsByOr,
-                            getBookInfoList
-                        });
+                                getStringByOr,
+                                getElementsByOr,
+                                getBookInfoList
+                            }
+                        );
 
                         return analyzeRuleModule;
                     })();
@@ -775,10 +814,10 @@ function PGIModules(kitName) {
                          * @returns {boolean}
                          */
                         function checkJSONInput(input) {
-                            try{
+                            try {
                                 JSON.parse(input);
                                 return true;
-                            }catch{
+                            } catch {
                                 longToastLog("请按正确格式输入");
                                 return false;
                             }
@@ -808,24 +847,22 @@ function PGIModules(kitName) {
                         /**
                          * 从登录result批量添加动态属性到loginUrlModule；默认不可枚举、配置；会屏蔽来自generalModule中的同名属性
                          */
-                        const descriptors = {};
-                        Object.keys(result).forEach((key) => {
-                            descriptors[key] = {
-                                get() {
-                                    return getCurrentLoginInfo(key);
-                                },
-                                set(value) {
-                                    setCurrentLoginInfo(key, value);
-                                }
-                            };
-                        });
-                        Object.defineProperties(loginUrlModule, descriptors);
-
-                        Object.assign(loginUrlModule, {
-                            //注册loginUrlModule独有方法属性
+                        defineAccessorProperties(
+                            loginUrlModule,
+                            result,
                             getCurrentLoginInfo,
                             setCurrentLoginInfo
-                        })
+                        );
+                        
+
+                       defineDataProperties(
+                            loginUrlModule,
+                            {
+                                //注册loginUrlModule独有方法属性
+                                getCurrentLoginInfo,
+                                setCurrentLoginInfo
+                            }
+                        );
 
                         return loginUrlModule;
                     })();
