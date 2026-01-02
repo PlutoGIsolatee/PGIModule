@@ -1,6 +1,6 @@
 /**
  * @file smart js module for legado
- * @version 260101.1
+ * @version 260102.1
  * @author PlutoGIsolatee <plutoqweguo@126.com>
  * @license LGPL-2.1.only
  */
@@ -118,18 +118,18 @@ function PGIModules(kitName) {
         }
 
         /**
-         *拼接相对链接
-         *@param {string} baseurl - 基准URL
-         *@param {string} relativePath - 相对URL
+         *拼接相对路径
+         *@param {string} base - 基准路径
+         *@param {string} relativePath - 相对路径
          *@return {string} 绝对URL
          */
-        function getAbsoluteUrl(relativePath, baseurl) {
-            if (baseurl.endsWith("/") && relativePath.startsWith("/")) {
-                return baseurl.slice(0, -1) + relativePath;
-            } else if (!baseurl.endsWith("/") && !relativePath.startsWith("/")) {
-                return baseurl + "/" + relativePath;
+        function getAbsolutePath(relativePath, base) {
+            if (base.endsWith("/") && relativePath.startsWith("/")) {
+                return base.slice(0, -1) + relativePath;
+            } else if (!base.endsWith("/") && !relativePath.startsWith("/")) {
+                return base + "/" + relativePath;
             } else {
-                return baseurl + relativePath;
+                return base + relativePath;
             }
         }
 
@@ -194,7 +194,7 @@ function PGIModules(kitName) {
         const basicModule = {
             //注册无依赖方法属性
             objectToString,
-            getAbsoluteUrl,
+            getAbsolutePath,
             truncateMiddle,
             errorToString,
             curry
@@ -392,7 +392,7 @@ function PGIModules(kitName) {
                         method,
                         useWebView
                     }, otherParams));
-                    url = getAbsoluteUrl(`${relativePath},${urlparams}`, baseurl);
+                    url = getAbsolutePath(`${relativePath},${urlparams}`, baseurl);
                 }
                 java.log(`尝试发送请求${url}`);
                 return java.ajax(url);
@@ -515,11 +515,31 @@ function PGIModules(kitName) {
             }
 
             /**
+             * 拼接相对地址
              * @param {string} relativePath
-             * @param {string} [baseurl = generalModule.baseUrl]
+             * @param {string} [base = generalModule.baseUrl]
+             * @returns {string}
              */
-            function getAbsoluteUrl(relativePath, baseurl = generalModule.baseUrl) {
-                return basicModule.getAbsoluteUrl(relativePath, baseurl);
+            function getAbsolutePath(relativePath, base = generalModule.baseUrl) {
+                return basicModule.getAbsolutePath(relativePath, base);
+            }
+
+            /**
+             * 获取登录信息
+             * @param {string} name 
+             * @returns {java.lang.String}
+             */
+            function getLoginInfo(name) {
+                return source.getLoginInfoMap().get(name);
+            }
+
+            /**
+             * 设置登录信息
+             * @param {string} name 
+             * @param {string} value 
+             */
+            function setLoginInfo(name, value) {
+                source.getLoginInfoMap().put(name, objectToString(value));
             }
 
             /**
@@ -529,10 +549,10 @@ function PGIModules(kitName) {
             Object.keys(initialSourceVariable).forEach((key) => {
                 descriptors[key] = {
                     get() {
-                        return getVariableValue(key);
+                        return getLoginInfo(key);
                     },
                     set(value) {
-                        setVariableValue(key, value);
+                        setLoginInfo(key, value);
                     }
                 };
             });
@@ -571,8 +591,10 @@ function PGIModules(kitName) {
                 getStringListByJsoupCSS,
                 shellHTML,
                 enterCurrentWebpage,
-                getAbsoluteUrl,
-                enterCurrentBook
+                getAbsolutePath,
+                enterCurrentBook,
+                setLoginInfo,
+                getLoginInfo
             });
 
 
@@ -746,8 +768,39 @@ function PGIModules(kitName) {
                 }
                 case "loginUrl": {
                     return (function () {
+
+                        /**
+                         * 检查输入值为JSON，如是则保存
+                         * @param {string} input 
+                         * @returns {boolean}
+                         */
+                        function checkJSONInput(input) {
+                            try{
+                                JSON.parse(input);
+                                return true;
+                            }catch{
+                                longToastLog("请按正确格式输入");
+                                return false;
+                            }
+                        }
+
+                        /**
+                         * 获取即时登录UI控件值
+                         * @param {string} name - 键名 
+                         * @returns {java.lang.String}
+                         */
                         function getCurrentLoginInfo(name) {
                             return result.get(name);
+                        }
+
+                        /**
+                         * 设置登录键值并更新登录UI
+                         * @param {string} name 
+                         * @param {string} value 
+                         */
+                        function setCurrentLoginInfo(name, value) {
+                            result.put(name, value);
+                            java.upLoginData(result);
                         }
 
                         const loginUrlModule = Object.create(generalModule);
@@ -759,10 +812,10 @@ function PGIModules(kitName) {
                         Object.keys(result).forEach((key) => {
                             descriptors[key] = {
                                 get() {
-                                    return getVariableValue(key);
+                                    return getCurrentLoginInfo(key);
                                 },
                                 set(value) {
-                                    setVariableValue(key, value);
+                                    setCurrentLoginInfo(key, value);
                                 }
                             };
                         });
@@ -770,7 +823,8 @@ function PGIModules(kitName) {
 
                         Object.assign(loginUrlModule, {
                             //注册loginUrlModule独有方法属性
-                            getCurrentLoginInfo
+                            getCurrentLoginInfo,
+                            setCurrentLoginInfo
                         })
 
                         return loginUrlModule;
