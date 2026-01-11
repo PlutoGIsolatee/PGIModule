@@ -96,140 +96,98 @@ function PGIModules(kitName) {
          * @param {string} [params.query]
          * @param {string} [params.ref]
          */
-        function URL(params) {
-            const net = Packages.java.net;
-            if (typeof params === "string") {
-                this = new net.URI(params);
-
-            } else if (typeof params === "object") {
-                this = new net.URI(
-                    params.protocol || "http",
+        function URL(param) {
+            if (typeof param === "string") {
+                this.uri = new Packages.java.net.URI(param);
+            } else if (typeof param === "object") {
+                this.uri = new Packages.java.net.URI(
+                    param.protocol || "http",
                     null,
-                    params.host || null,
-                    params.port || -1,
-                    params.path || null,
-                    params.query || null,
-                    params.ref || null
+                    param.host || null,
+                    param.port || -1,
+                    param.path || null,
+                    param.query || null,
+                    param.ref || null
                 );
             }
         }
         const descURL = {
             string: {
                 get: function () {
-                    return this.toASCIIString();
+                    return this.uri.toASCIIString();
+                },
+                set: function (value) {
+                    this.uri = new Packages.java.net.URI(value);
                 }
             },
             host: {
                 get: function () {
-                    return this.getHost();
+                    return this.uri.getHost();
                 },
                 set: function (value) {
-                    this = new Packages.java.net.URI(
-                        this.getScheme(),
+                    this.uri = new Packages.java.net.URI(
+                        this.uri.getScheme(),
                         null,
                         value,
-                        this.getPort(),
-                        this.getPath(),
-                        this.getQuery(),
-                        this.getFragment()
+                        this.uri.getPort(),
+                        this.uri.getPath(),
+                        this.uri.getQuery(),
+                        this.uri.getFragment()
                     );
                 }
             },
             protocol: {
                 get: function () {
-                    return this.getScheme();
+                    return this.uri.getScheme();
                 },
                 set: function (value) {
-                    this = new Packages.java.net.URI(
+                    this.uri = new Packages.java.net.URI(
                         value,
                         null,
-                        this.getHost(),
-                        this.getPort(),
-                        this.getPath(),
-                        this.getQuery(),
-                        this.getFragment()
+                        this.uri.getHost(),
+                        this.uri.getPort(),
+                        this.uri.getPath(),
+                        this.uri.getQuery(),
+                        this.uri.getFragment()
                     );
                 }
             },
             port: {
                 get: function () {
-                    return this.getPort();
+                    return this.uri.getPort();
                 },
                 set: function (value) {
-                    this = new Packages.java.net.URI(
-                        this.getScheme(),
+                    this.uri = new Packages.java.net.URI(
+                        this.uri.getScheme(),
                         null,
-                        this.getHost(),
+                        this.uri.getHost(),
                         value,
-                        this.getPath(),
-                        this.getQuery(),
-                        this.getFragment()
+                        this.uri.getPath(),
+                        this.uri.getQuery(),
+                        this.uri.getFragment()
                     );
                 }
             },
             authority: {
                 get: function () {
-                    return this.getAuthority();
+                    return this.uri.getAuthority();
                 },
                 set: function (value) {
-                    this = new Packages.java.net.URI(
-                        this.getScheme(),
+                    this.uri = new Packages.java.net.URI(
+                        this.uri.getScheme(),
                         value,
-                        this.getPath(),
-                        this.getQuery(),
-                        this.getFragment()
+                        this.uri.getPath(),
+                        this.uri.getQuery(),
+                        this.uri.getFragment()
                     );
                 }
             },
-            path: {
-                get: function () {
-                    return this.getPath();
-                },
-                set: function (value) {
-                    this = new Packages.java.net.URI(
-                        this.getScheme(),
-                        null,
-                        this.getHost(),
-                        this.getPort(),
-                        value,
-                        this.getQuery(),
-                        this.getFragment()
-                    );
-                }
-            },
-            query: {
-                get: function () {
-                    return this.getQuery();
-                },
-                set: function (value) {
-                    this = new Packages.java.net.URI(
-                        this.getScheme(),
-                        null,
-                        this.getHost(),
-                        this.getPort(),
-                        this.getPath(),
-                        value,
-                        this.getFragment()
-                    );
-                }
-            },
-            ref: {
-                get: function () {
-                    return this.getFragment();
-                },
-                set: function (value) {
-                    this = new Packages.java.net.URI(
-                        this.getScheme(),
-                        null,
-                        this.getHost(),
-                        this.getPort(),
-                        this.getPath(),
-                        this.getQuery(),
-                        value
-                    );
+            toString: {
+                value: function () {
+                    return this.uri.toString();
                 }
             }
-        };
+        }
         Object.defineProperties(URL.prototype, descURL);
 
         /**
