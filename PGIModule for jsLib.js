@@ -1,6 +1,6 @@
 /**
  * @file smart js module for legado
- * @version 260111.1
+ * @version 260111.2
  * @author PlutoGIsolatee <plutoqweguo@126.com>
  * @license LGPL-2.1.only
  */
