@@ -42,18 +42,22 @@ function PGIModules(kitName) {
          */
 
         /**
-         * 新增或修改自有数据属性
-         * @param {Object} target 
-         * @param {Object} source 
-         * @param {Object} [descriptor = {}] 数据属性描述符; 应用于全体; 默认{enumerable: false, configurable: false, writable: false}
-         * @param {string} [nameSpace = ""] - 属性名前缀
-         */
-        function defineDataProperties(target, source, descriptor = {}, nameSpace = "") {
-            const des = {};
-            Object.keys(source).forEach((key) => {
-                const k = nameSpace + key;
-                des[k] = { value: source[key] };
-                Object.assign(des[k], descriptor);
+          * 新增或修改自有数据属性
+          * @param {Object} target 
+          * @param {Object} descriptor - 数据属性描述符; 应用于全体; 默认{enumerable: false, configurable: false, writable: false}
+          * @param {string} [nameSpace = ""] - 属性名前缀
+          * @param {...Object} sources - 源对象
+          */
+        function defineDataProperties(target, descriptor, nameSpace = "", ...sources) {
+            const des = {
+                "writable": true
+            };
+            sources.forEach((source) => {
+                Object.keys(source).forEach((key) => {
+                    const k = nameSpace + key;
+                    des[k] = { value: source[key] };
+                    Object.assign(des[k], descriptor);
+                });
             });
             Object.defineProperties(target, des);
         }
@@ -61,27 +65,29 @@ function PGIModules(kitName) {
         /**
          * 新增或修改自有存取器属性
          * @param {Object} target 
-         * @param {Object} source 
          * @param {Function} [getter = Function.prototype] - 存取器getter函数；参数key
          * @param {Function} [setter = Function.prototype] - 存取器setter函数；参数key、value
          * @param {Object} [descriptor = {}] 存取器属性描述符; 应用于全体; 默认{enumerable: false, configurable: false}
          * @param {string} [nameSpace = ""] - 属性名前缀
+         * @param {...Object} sources - 源对象
          */
-        function defineAccessorProperties(target, source,
+        function defineAccessorProperties(target,
             getter = Function.prototype, setter = Function.prototype,
-            descriptor = {}, nameSpace = "") {
+            descriptor = {}, nameSpace = "", ...sources) {
             const des = {};
-            Object.keys(source).forEach((key) => {
-                const k = nameSpace + key;
-                des[k] = {
-                    get: function () {
-                        return getter(key);
-                    },
-                    set: function (value) {
-                        setter(key, value);
-                    }
-                };
-                Object.assign(des[k], descriptor);
+            sources.forEach((source) => {
+                Object.keys(source).forEach((key) => {
+                    const k = nameSpace + key;
+                    des[k] = {
+                        get: function () {
+                            return getter.call(this, key);
+                        },
+                        set: function (value) {
+                            setter.call(this, key, value);
+                        }
+                    };
+                    Object.assign(des[k], descriptor);
+                });
             });
             Object.defineProperties(target, des);
         }
@@ -369,6 +375,7 @@ function PGIModules(kitName) {
 
         defineDataProperties(
             basicModule,
+            undefined, undefined,
             {
                 //注册无依赖方法属性
                 objectToString,
@@ -798,9 +805,10 @@ function PGIModules(kitName) {
 
             defineAccessorProperties(
                 generalModule,
-                INITIAL_SOURCE_VARIABLE,
                 getVariableValue,
-                setVariableValue
+                setVariableValue,
+                undefined, undefined,
+                INITIAL_SOURCE_VARIABLE
             );
 
             /**
@@ -808,14 +816,16 @@ function PGIModules(kitName) {
              */
             defineAccessorProperties(
                 generalModule,
-                source.getLoginInfoMap(),
                 getLoginInfo,
                 setLoginInfo,
-                "log_"
+                undefined,
+                "log_",
+                source.getLoginInfoMap()
             );
 
             defineDataProperties(
                 generalModule,
+                undefined, undefined,
                 {
                     //注册使用通用API方法属性
                     INITIAL_SOURCE_VARIABLE,
@@ -998,6 +1008,7 @@ function PGIModules(kitName) {
 
                         defineDataProperties(
                             analyzeRuleModule,
+                            undefined, undefined,
                             {
                                 //注册analyzeRuleModule独有方法属性
 
@@ -1069,15 +1080,17 @@ function PGIModules(kitName) {
                          */
                         defineAccessorProperties(
                             loginUrlModule,
-                            result,
                             getCurrentLoginInfo,
                             setCurrentLoginInfo,
-                            "log_"
+                            undefined,
+                            "log_",
+                            result
                         );
 
 
                         defineDataProperties(
                             loginUrlModule,
+                            undefined, undefined,
                             {
                                 //注册loginUrlModule独有方法属性
                                 getCurrentLoginInfo,
