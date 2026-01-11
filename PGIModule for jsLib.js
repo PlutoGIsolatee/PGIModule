@@ -1,6 +1,6 @@
 /**
  * @file smart js module for legado
- * @version 260110.2
+ * @version 260111.1
  * @author PlutoGIsolatee <plutoqweguo@126.com>
  * @license LGPL-2.1.only
  */
@@ -85,6 +85,152 @@ function PGIModules(kitName) {
             });
             Object.defineProperties(target, des);
         }
+
+        /**
+         * URL类封装; 使用java.net.URI实现
+         * @param {string|Object} params - URL字符串或URL参数对象
+         * @param {string} [params.protocol]
+         * @param {string} [params.host]
+         * @param {number} [params.port]
+         * @param {string} [params.path]
+         * @param {string} [params.query]
+         * @param {string} [params.ref]
+         */
+        function URL(params) {
+            const net = Packages.java.net;
+            if (typeof params === "string") {
+                this = new net.URI(params);
+
+            } else if (typeof params === "object") {
+                this = new net.URI(
+                    params.protocol || "http",
+                    null,
+                    params.host || null,
+                    params.port || -1,
+                    params.path || null,
+                    params.query || null,
+                    params.ref || null
+                );
+            }
+        }
+        const descURL = {
+            string: {
+                get: function () {
+                    return this.toASCIIString();
+                }
+            },
+            host: {
+                get: function () {
+                    return this.getHost();
+                },
+                set: function (value) {
+                    this = new Packages.java.net.URI(
+                        this.getScheme(),
+                        null,
+                        value,
+                        this.getPort(),
+                        this.getPath(),
+                        this.getQuery(),
+                        this.getFragment()
+                    );
+                }
+            },
+            protocol: {
+                get: function () {
+                    return this.getScheme();
+                },
+                set: function (value) {
+                    this = new Packages.java.net.URI(
+                        value,
+                        null,
+                        this.getHost(),
+                        this.getPort(),
+                        this.getPath(),
+                        this.getQuery(),
+                        this.getFragment()
+                    );
+                }
+            },
+            port: {
+                get: function () {
+                    return this.getPort();
+                },
+                set: function (value) {
+                    this = new Packages.java.net.URI(
+                        this.getScheme(),
+                        null,
+                        this.getHost(),
+                        value,
+                        this.getPath(),
+                        this.getQuery(),
+                        this.getFragment()
+                    );
+                }
+            },
+            authority: {
+                get: function () {
+                    return this.getAuthority();
+                },
+                set: function (value) {
+                    this = new Packages.java.net.URI(
+                        this.getScheme(),
+                        value,
+                        this.getPath(),
+                        this.getQuery(),
+                        this.getFragment()
+                    );
+                }
+            },
+            path: {
+                get: function () {
+                    return this.getPath();
+                },
+                set: function (value) {
+                    this = new Packages.java.net.URI(
+                        this.getScheme(),
+                        null,
+                        this.getHost(),
+                        this.getPort(),
+                        value,
+                        this.getQuery(),
+                        this.getFragment()
+                    );
+                }
+            },
+            query: {
+                get: function () {
+                    return this.getQuery();
+                },
+                set: function (value) {
+                    this = new Packages.java.net.URI(
+                        this.getScheme(),
+                        null,
+                        this.getHost(),
+                        this.getPort(),
+                        this.getPath(),
+                        value,
+                        this.getFragment()
+                    );
+                }
+            },
+            ref: {
+                get: function () {
+                    return this.getFragment();
+                },
+                set: function (value) {
+                    this = new Packages.java.net.URI(
+                        this.getScheme(),
+                        null,
+                        this.getHost(),
+                        this.getPort(),
+                        this.getPath(),
+                        this.getQuery(),
+                        value
+                    );
+                }
+            }
+        };
+        Object.defineProperties(URL.prototype, descURL);
 
         /**
          * 柯里化; 支持占位符curry._
@@ -186,19 +332,17 @@ function PGIModules(kitName) {
         }
 
         /**
-         *拼接相对路径
+         *拼接相对路径; 使用java.net.URI实现
          *@param {string} base - 基准路径
          *@param {string} relativePath - 相对路径
          *@return {string} 绝对URL
          */
-        function getAbsolutePath(relativePath, base) {
-            if (base.endsWith("/") && relativePath.startsWith("/")) {
-                return base.slice(0, -1) + relativePath;
-            } else if (!base.endsWith("/") && !relativePath.startsWith("/")) {
-                return base + "/" + relativePath;
-            } else {
-                return base + relativePath;
-            }
+        function getAbsolutePath(relativePath, baseUrl) {
+            const URI = Packages.java.net.URI;
+            const base = new URI(baseUrl),
+                relative = new URI(relativePath);
+            const resolved = base.resolve(relative);
+            return resolved.toASCIIString();
         }
 
         const ERROR_TO_STRING_DEFAULT_MAX_DEPTH = 10;
