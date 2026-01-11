@@ -48,10 +48,8 @@ function PGIModules(kitName) {
           * @param {string} [nameSpace = ""] - 属性名前缀
           * @param {...Object} sources - 源对象
           */
-        function defineDataProperties(target, descriptor, nameSpace = "", ...sources) {
-            const des = {
-                "writable": true
-            };
+        function defineDataProperties(target, descriptor = { writable: true }, nameSpace = "", ...sources) {
+            const des = {};
             sources.forEach((source) => {
                 Object.keys(source).forEach((key) => {
                     const k = nameSpace + key;
