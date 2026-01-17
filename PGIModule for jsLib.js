@@ -1,12 +1,573 @@
 /**
  * @file smart js module for legado
- * @version 260111.2
+ * @version 260117.1
  * @author PlutoGIsolatee <plutoqweguo@126.com>
  * @license LGPL-2.1.only
  */
 
-/** @param {string} [kitName] - 为空时自动判断环境创建模块实例
- * @returns {Object}
+
+function PGIModules() {
+    const {
+        Packages,
+        java,
+        source,
+        cache,
+        book,
+        baseUrl,
+        result,
+        cookie,
+        chapter,
+        title,
+        src
+    } = this;
+    const here = this;
+
+    //单例模块缓存
+    const modules = Object.create(null);
+
+    function build(kitName) {
+        if (!kitName) {
+            /**
+             * 判断逻辑：主要依Packeges存在性判断宿主环境，
+             * 在rhino环境通过java对象的类继承关系判断具体模块类型
+             * 继承实现树：
+             * JsEncodeUtils Interface
+             * └─ JsExtensions Interface
+             *    ├─ AnalyzeRule Class
+             *    ├─ AnalyzeUrl Class
+             *    └─ RssJsExtensions Class
+             *        └─ SourceLoginJsExtensions Class
+             */
+            if (!java) {
+                throw new Error("无法识别的运行环境：本模块为legado设计，请在legado书源或内置浏览器中使用");
+            } else if (!Packages) {
+                kitName = "WebView";
+            } else {
+                if (java instanceof Packages.io.legado.app.help.JsExtensions) {
+                    if (java instanceof Packages.io.legado.app.model.analyzeRule.AnalyzeRule) {
+                        kitName = "AnalyzeRule";
+                    }
+                    if (java instanceof Packages.io.legado.app.model.analyzeRule.AnalyzeUrl) {
+                        kitName = "AnalyzeUrl";
+                    }
+                    if (java instanceof Packages.io.legado.app.ui.rss.read.RssJsExtensions) {
+                        if (java instanceof Packages.io.legado.app.ui.login.SourceLoginJsExtensions) {
+                            kitName = "Login";
+                        } else {
+                            kitName = "Rss";
+                        }
+                    }
+                }
+            }
+        }
+
+        switch (kitName) {
+            case "Basic": {
+                return BasicModule();
+            }
+            case "AnalyzeRule": {
+                return AnalyzeRuleModule();
+            }
+            case "AnalyzeUrl": {
+                return AnalyzeUrlModule();
+            }
+            case "Login": {
+                return LoginModule();
+            }
+            case "WebView": {
+                return WebViewModule();
+            }
+            case "Rss": {
+                return RssModule();
+            }
+            default: {
+                return BasicModule();
+            }
+        }
+    }
+
+    function BasicModule() {
+        if (modules.basicModule) {
+            return modules.basicModule;
+        } else {
+
+            function defineDataPropertiesFromSource(target, source, descriptor = { writable: true }, nameSpace = "") {
+                const des = {};
+                Object.keys(source).forEach((key) => {
+                    const k = nameSpace + key;
+                    des[k] = { value: source[key] };
+                    Object.assign(des[k], descriptor);
+                });
+                Object.defineProperties(target, des);
+            }
+
+            function defineDataPropertiesFromSources(target, sources, descriptor = { writable: true }, nameSpace = "") {
+                const des = {};
+                sources.forEach((source) => {
+                    Object.keys(source).forEach((key) => {
+                        const k = nameSpace + key;
+                        des[k] = { value: source[key] };
+                        Object.assign(des[k], descriptor);
+                    });
+                });
+                Object.defineProperties(target, des);
+            }
+
+            function defineAccessorPropertiesFromSource(
+                target,
+                source,
+                getter = Function.prototype,
+                setter = Function.prototype,
+                descriptor = {},
+                nameSpace = "") {
+                const des = {};
+                Object.keys(source).forEach((key) => {
+                    const k = nameSpace + key;
+                    des[k] = {
+                        get: getter.bind(target, key),
+                        set: setter.bind(target, key)
+                    };
+                    Object.assign(des[k], descriptor);
+                });
+                Object.defineProperties(target, des);
+            }
+
+            function defineAccessorPropertiesFromSources(
+                target,
+                sources,
+                getter = Function.prototype,
+                setter = Function.prototype,
+                descriptor = {},
+                nameSpace = "") {
+                const des = {};
+                sources.forEach((source) => {
+                    Object.keys(source).forEach((key) => {
+                        const k = nameSpace + key;
+                        des[k] = {
+                            get: getter.bind(target, key),
+                            set: setter.bind(target, key)
+                        };
+                        Object.assign(des[k], descriptor);
+                    });
+                });
+                Object.defineProperties(target, des);
+            }
+
+            /*function URL(param) {
+                        if (typeof param === "string") {
+                            this.uri = new Packages.java.net.URI(param);
+                        } else if (typeof param === "object") {
+                            this.uri = new Packages.java.net.URI(
+                                param.protocol || "http",
+                                null,
+                                param.host || null,
+                                param.port || -1,
+                                param.path || null,
+                                param.query || null,
+                                param.ref || null
+                            );
+                        }
+                    }
+            const descURL = {
+                    string: {
+                        get: function () {
+                            return this.uri.toASCIIString();
+                        },
+                        set: function (value) {
+                            this.uri = new Packages.java.net.URI(value);
+                        }
+                    },
+                    host: {
+                        get: function () {
+                            return this.uri.getHost();
+                        },
+                        set: function (value) {
+                            this.uri = new Packages.java.net.URI(
+                                this.uri.getScheme(),
+                                null,
+                                value,
+                                this.uri.getPort(),
+                                this.uri.getPath(),
+                                this.uri.getQuery(),
+                                this.uri.getFragment()
+                            );
+                        }
+                    },
+                    protocol: {
+                        get: function () {
+                            return this.uri.getScheme();
+                        },
+                        set: function (value) {
+                            this.uri = new Packages.java.net.URI(
+                                value,
+                                null,
+                                this.uri.getHost(),
+                                this.uri.getPort(),
+                                this.uri.getPath(),
+                                this.uri.getQuery(),
+                                this.uri.getFragment()
+                            );
+                        }
+                    },
+                    port: {
+                        get: function () {
+                            return this.uri.getPort();
+                        },
+                        set: function (value) {
+                            this.uri = new Packages.java.net.URI(
+                                this.uri.getScheme(),
+                                null,
+                                this.uri.getHost(),
+                                value,
+                                this.uri.getPath(),
+                                this.uri.getQuery(),
+                                this.uri.getFragment()
+                            );
+                        }
+                    },
+                    authority: {
+                        get: function () {
+                            return this.uri.getAuthority();
+                        },
+                        set: function (value) {
+                            this.uri = new Packages.java.net.URI(
+                                this.uri.getScheme(),
+                                value,
+                                this.uri.getPath(),
+                                this.uri.getQuery(),
+                                this.uri.getFragment()
+                            );
+                        }
+                    },
+                    toString: {
+                        value: function () {
+                            return this.uri.toString();
+                        }
+                    }
+                }
+                Object.defineProperties(URL.prototype, descURL);*/
+
+            /**
+             * java.net.URI封装
+             * @typedef {Object} URI
+             * @property {string} scheme - 协议
+             * @property {string} host - 主机名
+             * @property {number} port - 端口号
+             * @property {string} path - 路径; 未编码
+             * @property {Object} query - 查询参数对象; 未编码
+             * @property {Function} toString - 编码后
+             * @property {Function} toRawString
+             * 
+             * @param {string|Object} params - URI字符串或URI参数对象
+             * @param {string} [params.scheme] - URI协议，如http、https
+             * @param {string} [params.host] - 主机名，如www.example.com
+             * @param {number} [params.port] - 端口号，如80、443
+             * @param {string} [params.path] - 路径，如/index.html
+             * @param {Object} [params.query] - 查询参数对象，如{key1: "value1", key2: "value2"}
+             * @param {string} [params.fragment] - 片段标识符，如section1
+             */
+            function URI(param, base) {
+                let bucket = {};
+
+                if (typeof param === "string") {
+                    if (base) {
+                        bucket.uri = URI.createJavaURIFromRelative(param, base);
+                    } else {
+                        bucket.uri = URI.createJavaURIFromString(param);
+                    }
+                } else if (typeof param === "object") {
+                    bucket.uri = URI.createJavaURIFromComponents(param);
+                }
+
+                bucket.scheme = bucket.uri.getScheme();
+                bucket.host = bucket.uri.getHost();
+                bucket.port = bucket.uri.getPort();
+                bucket.path = bucket.uri.getPath();
+                bucket.query = URI.queryParse(bucket.uri.getQuery() || "");
+                bucket.fragment = bucket.uri.getFragment();
+
+                function updateURI(property, value) {
+                    bucket[property] = value;
+                    bucket.uri = null;
+                }
+
+                /**
+                 * 单例、懒加载，避免修改属性时频繁创建URI对象
+                 */
+                function getURI() {
+                    if (!bucket.uri) {
+                        bucket.uri = URI.createJavaURIFromComponents({
+                            scheme: bucket.scheme,
+                            host: bucket.host,
+                            port: bucket.port,
+                            path: bucket.path,
+                            query: bucket.query,
+                            fragment: bucket.fragment
+                        });
+                    }
+                    return bucket.uri;
+                }
+
+                function getFromBucket(property) {
+                    return bucket[property];
+                }
+
+                const descriptor = {
+                    toRawString: {
+                        value: function () {
+                            return getURI().toString();
+                        }
+                    },
+                    toString: {
+                        value: function () {
+                            return getURI().toASCIIString();
+                        }
+                    },
+                    encodedPath: {
+                        get: function () {
+                            return getURI().getPath();
+                        }
+                    },
+                    encodedQuery: {
+                        get: function () {
+                            return getURI().getQuery();
+                        }
+                    },
+                    encodedFragment: {
+                        get: function () {
+                            return getURI().getFragment();
+                        }
+                    }
+                };
+
+                ["scheme", "host", "port", "path", "query", "fragment"].forEach((property) => {
+                    descriptor[property] = {
+                        get: getFromBucket.bind(this, property),
+                        set: updateURI.bind(this, property)
+                    };
+                });
+
+                Object.defineProperties(this, descriptor);
+            }
+
+            URI.JavaURI = Packages.java.net.URI;
+
+            /**
+             * 查询参数对象转查询字符串; 未编码
+             * @param {Object} queryObj 
+             */
+            URI.queryStringfy = function (queryObj) {
+                Object.keys(queryObj).map(key => {
+                    return key + "=" + queryObj[key];
+                }).join("&");
+            }
+
+            URI.queryParse = function (queryString) {
+                const queryObj = {};
+                queryString.split("&").forEach(pair => {
+                    const [key, value] = pair.split("=");
+                    queryObj[key] = value;
+                });
+                return queryObj;
+            }
+
+            URI.createJavaURIFromString = function (str) {
+                return new URI.JavaURI(str);
+            };
+
+            URI.createJavaURIFromRelative = function (relative, base) {
+                return new URI.JavaURI(base).resolve(new URI.JavaURI(relative));
+            }
+
+            URI.createJavaURIFromComponents = function (components) {
+                return new URI.JavaURI(
+                    components.scheme || "http",
+                    null,
+                    components.host || null,
+                    components.port || -1,
+                    components.path || null,
+                    URI.queryStringfy(components.query) || null,
+                    components.fragment || null
+                );
+            };
+
+            /**
+             * 柯里化; 支持占位符curry._
+             * @example
+             * const add = (a, b, c) => a + b + c;
+             * const curriedAdd = curry(add);
+             * curriedAdd(1)(2)(3); // 6
+             * curriedAdd(curry._, 2)(1)(3); // 6
+             * @param {Function} fn
+             * @param {Object} [thisArg = null]
+             * @return {Function}
+             */
+            function curry(fn, thisArg = null) {
+                return function curried(...args) {
+                    const completeArgs = args.filter(arg => arg !== curry._);
+
+                    if (completeArgs.length >= fn.length && !args.includes(curry._)) {
+                        return fn.apply(thisArg, args);
+                    }
+
+                    return function (...args2) {
+                        const combinedArgs = [];
+                        let argsIndex = 0,
+                            args2Index = 0;
+
+
+                        for (let i = 0; i < args.length; i++) {
+                            if (args[i] === curry._ && args2Index < args2.length) {
+                                combinedArgs.push(args2[args2Index++]);
+                            } else {
+                                combinedArgs.push(args[i]);
+                            }
+                        }
+
+                        while (args2Index < args2.length) {
+                            combinedArgs.push(args2[args2Index++]);
+                        }
+
+                        return curried.apply(thisArg, combinedArgs);
+                    };
+                };
+            }
+
+            curry._ = Symbol('curry_placeholder');
+
+            /**
+             * 检查字符串为合法JSON
+             * @param {string} input
+             * @param {Function} [errorCallback = Function.prototype] - 出错回调
+             * @returns {JSON}
+             */
+            function checkJSON(input, errorCallback = Function.prototype) {
+                try {
+                    return JSON.parse(input);
+                } catch (e) {
+                    errorCallback();
+                    throw e;
+                }
+            }
+
+
+
+            /**
+             * 较安全的类型转换; 对于JAVA对象调用其toString方法
+             * @param {any} obj
+             * @returns {string}
+             */
+            function objectToString(obj) {
+                return (
+                    (!obj || ((typeof obj) !== "object") || (obj instanceof Packages.java.lang.Object)) ?
+                        String(obj) :
+                        JSON.stringify(obj)
+                );
+            }
+
+            const TRUNCATE_MIDDLE_DEFAULT_MAXLENGTH = 2000;
+
+            /**
+             * 字符串限长，从中央以省略标识代替超字数部分
+             * @param {any} source
+             * @param {number} [maxLength = TRUNCATE_MIDDLE_DEFAULT_MAXLENGTH]
+             * @param {string} [ellipsis = "'\n......\n'"] 省略标识
+             * @returns {string}
+             */
+            function truncateMiddle(source, maxLength = TRUNCATE_MIDDLE_DEFAULT_MAXLENGTH, ellipsis = '\n......\n') {
+                var str = objectToString(source);
+                if (str.length <= maxLength) {
+                    return str;
+                }
+                if (maxLength <= ellipsis.length) {
+                    return ellipsis.slice(0, maxLength);
+                }
+
+                const midPoint = Math.ceil(maxLength / 2) - Math.floor(ellipsis.length / 2),
+                    charsToKeep = maxLength - ellipsis.length,
+                    start = str.slice(0, midPoint),
+                    end = str.slice(-(charsToKeep - midPoint));
+                return start + ellipsis + end;
+            }
+
+            /**
+             *拼接相对路径; 使用java.net.URI实现
+             *@param {string} base - 基准路径
+             *@param {string} relativePath - 相对路径
+             *@return {string} 绝对URL
+             */
+            function getAbsolutePath(relativePath, baseUrl) {
+                const URI = Packages.java.net.URI;
+                const base = new URI(baseUrl),
+                    relative = new URI(relativePath);
+                const resolved = base.resolve(relative);
+                return resolved.toASCIIString();
+            }
+
+            const ERROR_TO_STRING_DEFAULT_MAX_DEPTH = 10;
+            const ERROR_TO_STRING_DEFAULT_MAX_MESSAGE_LENGTH = 2000;
+
+            /**
+             * Error转string；实现了自定义ExtraMessage属性用于额外堆栈描述
+             * @param {Error} error
+             * @param {number} [maxDepth = ERROR_TO_STRING_DEFAULT_MAX_DEPTH] - cause栈遍历深度限度
+             * @param {number} [maxMessageLength = ERROR_TO_STRING_DEFAULT_MAX_MESSAGE_LENGTH]
+             * @returns {string} 形如Error: msg\nextraMessage\n<= Error: msg\nextraMessage\n...
+             * @throws {TypeError} 首个参数应为Error类型
+             */
+            function errorToString(error, maxDepth = ERROR_TO_STRING_DEFAULT_MAX_DEPTH, maxMessageLength = ERROR_TO_STRING_DEFAULT_MAX_MESSAGE_LENGTH) {
+                if (!(error instanceof Error)) {
+                    let er = new TypeError("errorToString 首个参数应为Error类型");
+                    throw er;
+                }
+
+                let errorToStringSingle = (err) => {
+                    let str = (
+                        (err.name || "Error") +
+                        (
+                            (err.message !== undefined) ?
+                                (": " +
+                                    truncateMiddle(
+                                        err.message, maxMessageLength
+                                    )) :
+                                ""
+                        ) +
+                        (
+                            (err.extraMessage !== undefined) ?
+                                ("\n" +
+                                    truncateMiddle(
+                                        err.extraMessage, maxMessageLength
+                                    )) :
+                                ""
+                        )
+                    );
+                    return (str);
+                }
+
+                var causeChain = "",
+                    currentCause = error.cause,
+                    depth = 0;
+
+                while (currentCause && depth < maxDepth) {
+                    if (typeof currentCause === 'object') {
+                        causeChain += "\n<= " + errorToStringSingle(currentCause);
+                        currentCause = currentCause.cause;
+                    } else {
+                        causeChain += `\n<= ${String(currentCause)}`;
+                        currentCause = null;
+                    }
+                    depth++;
+                    causeChain += ((currentCause && (depth >= maxDepth)) ? "\n..." : "");
+                }
+
+                return errorToStringSingle(error) + "\n" + causeChain;
+            }
+        }
+    }
+}
+
+/**
+ * @deprecated 待重构
  */
 function PGIModules(kitName) {
 
