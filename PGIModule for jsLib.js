@@ -87,9 +87,8 @@ function PGIModules() {
     }
 
     function BasicModule() {
-        if (modules.basicModule) {
-            return modules.basicModule;
-        } else {
+        if (!modules.basicModule) {
+            modules.basicModule = Object.create(null);
 
             function defineDataPropertiesFromSource(target, source, descriptor = { writable: true }, nameSpace = "") {
                 const des = {};
@@ -153,111 +152,23 @@ function PGIModules() {
                 Object.defineProperties(target, des);
             }
 
-            /*function URL(param) {
-                        if (typeof param === "string") {
-                            this.uri = new Packages.java.net.URI(param);
-                        } else if (typeof param === "object") {
-                            this.uri = new Packages.java.net.URI(
-                                param.protocol || "http",
-                                null,
-                                param.host || null,
-                                param.port || -1,
-                                param.path || null,
-                                param.query || null,
-                                param.ref || null
-                            );
-                        }
-                    }
-            const descURL = {
-                    string: {
-                        get: function () {
-                            return this.uri.toASCIIString();
-                        },
-                        set: function (value) {
-                            this.uri = new Packages.java.net.URI(value);
-                        }
-                    },
-                    host: {
-                        get: function () {
-                            return this.uri.getHost();
-                        },
-                        set: function (value) {
-                            this.uri = new Packages.java.net.URI(
-                                this.uri.getScheme(),
-                                null,
-                                value,
-                                this.uri.getPort(),
-                                this.uri.getPath(),
-                                this.uri.getQuery(),
-                                this.uri.getFragment()
-                            );
-                        }
-                    },
-                    protocol: {
-                        get: function () {
-                            return this.uri.getScheme();
-                        },
-                        set: function (value) {
-                            this.uri = new Packages.java.net.URI(
-                                value,
-                                null,
-                                this.uri.getHost(),
-                                this.uri.getPort(),
-                                this.uri.getPath(),
-                                this.uri.getQuery(),
-                                this.uri.getFragment()
-                            );
-                        }
-                    },
-                    port: {
-                        get: function () {
-                            return this.uri.getPort();
-                        },
-                        set: function (value) {
-                            this.uri = new Packages.java.net.URI(
-                                this.uri.getScheme(),
-                                null,
-                                this.uri.getHost(),
-                                value,
-                                this.uri.getPath(),
-                                this.uri.getQuery(),
-                                this.uri.getFragment()
-                            );
-                        }
-                    },
-                    authority: {
-                        get: function () {
-                            return this.uri.getAuthority();
-                        },
-                        set: function (value) {
-                            this.uri = new Packages.java.net.URI(
-                                this.uri.getScheme(),
-                                value,
-                                this.uri.getPath(),
-                                this.uri.getQuery(),
-                                this.uri.getFragment()
-                            );
-                        }
-                    },
-                    toString: {
-                        value: function () {
-                            return this.uri.toString();
-                        }
-                    }
-                }
-                Object.defineProperties(URL.prototype, descURL);*/
-
             /**
-             * java.net.URI封装
              * @typedef {Object} URI
              * @property {string} scheme - 协议
              * @property {string} host - 主机名
              * @property {number} port - 端口号
              * @property {string} path - 路径; 未编码
              * @property {Object} query - 查询参数对象; 未编码
+             * @property {string} fragment - 片段标识符; 未编码
+             * @property {string} encodedPath - 路径; 编码后
+             * @property {string} encodedQueryString - 查询字符串; 编码后
+             * @property {string} encodedFragment - 片段标识符; 编码后
              * @property {Function} toString - 编码后
-             * @property {Function} toRawString
-             * 
+             * @property {Function} toRawString - 未编码
+             */
+
+            /**
+             * java.net.URI封装
              * @param {string|Object} params - URI字符串或URI参数对象
              * @param {string} [params.scheme] - URI协议，如http、https
              * @param {string} [params.host] - 主机名，如www.example.com
@@ -286,6 +197,10 @@ function PGIModules() {
                 bucket.query = URI.queryParse(bucket.uri.getQuery() || "");
                 bucket.fragment = bucket.uri.getFragment();
 
+                function getFromBucket(property) {
+                    return bucket[property];
+                }
+
                 function updateURI(property, value) {
                     bucket[property] = value;
                     bucket.uri = null;
@@ -308,34 +223,30 @@ function PGIModules() {
                     return bucket.uri;
                 }
 
-                function getFromBucket(property) {
-                    return bucket[property];
-                }
-
                 const descriptor = {
                     toRawString: {
                         value: function () {
-                            return getURI().toString();
+                            return String(getURI().toString());
                         }
                     },
                     toString: {
                         value: function () {
-                            return getURI().toASCIIString();
+                            return String(getURI().toASCIIString());
                         }
                     },
                     encodedPath: {
                         get: function () {
-                            return getURI().getPath();
+                            return String(getURI().getPath());
                         }
                     },
-                    encodedQuery: {
+                    encodedQueryString: {
                         get: function () {
-                            return getURI().getQuery();
+                            return String(getURI().getQuery());
                         }
                     },
                     encodedFragment: {
                         get: function () {
-                            return getURI().getFragment();
+                            return String(getURI().getFragment());
                         }
                     }
                 };
@@ -351,25 +262,6 @@ function PGIModules() {
             }
 
             URI.JavaURI = Packages.java.net.URI;
-
-            /**
-             * 查询参数对象转查询字符串; 未编码
-             * @param {Object} queryObj 
-             */
-            URI.queryStringfy = function (queryObj) {
-                Object.keys(queryObj).map(key => {
-                    return key + "=" + queryObj[key];
-                }).join("&");
-            }
-
-            URI.queryParse = function (queryString) {
-                const queryObj = {};
-                queryString.split("&").forEach(pair => {
-                    const [key, value] = pair.split("=");
-                    queryObj[key] = value;
-                });
-                return queryObj;
-            }
 
             URI.createJavaURIFromString = function (str) {
                 return new URI.JavaURI(str);
@@ -390,6 +282,43 @@ function PGIModules() {
                     components.fragment || null
                 );
             };
+
+            /**
+             * 查询参数对象转查询字符串; 未编码
+             * @param {Object} queryObj 
+             */
+            URI.queryStringfy = function (queryObj) {
+                Object.keys(queryObj).map(key => {
+                    return key + "=" + queryObj[key];
+                }).join("&");
+            }
+
+            /**
+             * 查询字符串转查询参数对象; 未编码
+             * @param {string} queryString 
+             */
+            URI.queryParse = function (queryString) {
+                const queryObj = {};
+                queryString.split("&").forEach(pair => {
+                    const [key, value] = pair.split("=");
+                    queryObj[key] = value;
+                });
+                return queryObj;
+            }
+
+            /**
+             * 解析相对URI
+             * @param {string} relative
+             * @param {string} base
+             * @return {string} 绝对URI字符串
+             */
+            URI.resolve = function (relative, base) {
+                return String(URI.createJavaURIFromRelative(relative, base).toASCIIString());
+            }
+
+            function getAbsolutePath(relative, base) {
+                return URI.resolve(relative, base);
+            }
 
             /**
              * 柯里化; 支持占位符curry._
@@ -439,18 +368,19 @@ function PGIModules() {
              * 检查字符串为合法JSON
              * @param {string} input
              * @param {Function} [errorCallback = Function.prototype] - 出错回调
+             * @param {boolean} [doThrow = true] - 是否抛出异常
              * @returns {JSON}
              */
-            function checkJSON(input, errorCallback = Function.prototype) {
+            function checkJSON(input, errorCallback = Function.prototype, doThrow = true) {
                 try {
                     return JSON.parse(input);
                 } catch (e) {
                     errorCallback();
-                    throw e;
+                    if (doThrow) {
+                        throw e;
+                    }
                 }
             }
-
-
 
             /**
              * 较安全的类型转换; 对于JAVA对象调用其toString方法
@@ -490,25 +420,12 @@ function PGIModules() {
                 return start + ellipsis + end;
             }
 
-            /**
-             *拼接相对路径; 使用java.net.URI实现
-             *@param {string} base - 基准路径
-             *@param {string} relativePath - 相对路径
-             *@return {string} 绝对URL
-             */
-            function getAbsolutePath(relativePath, baseUrl) {
-                const URI = Packages.java.net.URI;
-                const base = new URI(baseUrl),
-                    relative = new URI(relativePath);
-                const resolved = base.resolve(relative);
-                return resolved.toASCIIString();
-            }
-
             const ERROR_TO_STRING_DEFAULT_MAX_DEPTH = 10;
             const ERROR_TO_STRING_DEFAULT_MAX_MESSAGE_LENGTH = 2000;
 
             /**
-             * Error转string；实现了自定义ExtraMessage属性用于额外堆栈描述
+             * Error转string
+             * 实现了自定义ExtraMessage属性用于额外堆栈描述; 实现了rhino 提供的stack属性形如：at <source>:lineNumber (functionName)
              * @param {Error} error
              * @param {number} [maxDepth = ERROR_TO_STRING_DEFAULT_MAX_DEPTH] - cause栈遍历深度限度
              * @param {number} [maxMessageLength = ERROR_TO_STRING_DEFAULT_MAX_MESSAGE_LENGTH]
@@ -560,10 +477,31 @@ function PGIModules() {
                     causeChain += ((currentCause && (depth >= maxDepth)) ? "\n..." : "");
                 }
 
-                return errorToStringSingle(error) + "\n" + causeChain;
+                return error.stack + "\n" + errorToStringSingle(error) + "\n" + causeChain;
             }
+
+            defineDataPropertiesFromSource(modules.basicModule, {
+                defineDataPropertiesFromSource,
+                defineDataPropertiesFromSources,
+                defineAccessorPropertiesFromSource,
+                defineAccessorPropertiesFromSources,
+                URI,
+                getAbsolutePath,
+                curry,
+                checkJSON,
+                objectToString,
+                truncateMiddle,
+                errorToString
+            });
         }
+        return modules.basicModule;
     }
+
+    function AnalyzeRuleModule() {
+
+    }
+
+    return { build };
 }
 
 /**
