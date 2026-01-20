@@ -1,6 +1,6 @@
 /**
  * @file smart js module for legado
- * @version 260117.1
+ * @version 260120.1
  * @author PlutoGIsolatee <plutoqweguo@126.com>
  * @license LGPL-2.1.only
  */
@@ -167,6 +167,8 @@ function PGIModules() {
              * @property {Function} toRawString - 未编码
              */
 
+            const URI_DATA_KEY = Symbol("URI_DATA_KEY");
+
             /**
              * java.net.URI封装
              * @param {string|Object} params - URI字符串或URI参数对象
@@ -178,88 +180,134 @@ function PGIModules() {
              * @param {string} [params.fragment] - 片段标识符，如section1
              */
             function URI(param, base) {
-                let bucket = {};
-
                 if (typeof param === "string") {
                     if (base) {
-                        bucket.uri = URI.createJavaURIFromRelative(param, base);
+                        this[URI_DATA_KEY].uri = URI.createJavaURIFromRelative(param, base);
                     } else {
-                        bucket.uri = URI.createJavaURIFromString(param);
+                        this[URI_DATA_KEY].uri = URI.createJavaURIFromString(param);
                     }
                 } else if (typeof param === "object") {
-                    bucket.uri = URI.createJavaURIFromComponents(param);
+                    this[URI_DATA_KEY].uri = URI.createJavaURIFromComponents(param);
                 }
 
-                bucket.scheme = bucket.uri.getScheme();
-                bucket.host = bucket.uri.getHost();
-                bucket.port = bucket.uri.getPort();
-                bucket.path = bucket.uri.getPath();
-                bucket.query = URI.queryParse(bucket.uri.getQuery() || "");
-                bucket.fragment = bucket.uri.getFragment();
-
-                function getFromBucket(property) {
-                    return bucket[property];
-                }
-
-                function updateURI(property, value) {
-                    bucket[property] = value;
-                    bucket.uri = null;
-                }
-
-                /**
-                 * 单例、懒加载，避免修改属性时频繁创建URI对象
-                 */
-                function getURI() {
-                    if (!bucket.uri) {
-                        bucket.uri = URI.createJavaURIFromComponents({
-                            scheme: bucket.scheme,
-                            host: bucket.host,
-                            port: bucket.port,
-                            path: bucket.path,
-                            query: bucket.query,
-                            fragment: bucket.fragment
-                        });
-                    }
-                    return bucket.uri;
-                }
-
-                const descriptor = {
-                    toRawString: {
-                        value: function () {
-                            return String(getURI().toString());
-                        }
-                    },
-                    toString: {
-                        value: function () {
-                            return String(getURI().toASCIIString());
-                        }
-                    },
-                    encodedPath: {
-                        get: function () {
-                            return String(getURI().getPath());
-                        }
-                    },
-                    encodedQueryString: {
-                        get: function () {
-                            return String(getURI().getQuery());
-                        }
-                    },
-                    encodedFragment: {
-                        get: function () {
-                            return String(getURI().getFragment());
-                        }
-                    }
-                };
-
-                ["scheme", "host", "port", "path", "query", "fragment"].forEach((property) => {
-                    descriptor[property] = {
-                        get: getFromBucket.bind(this, property),
-                        set: updateURI.bind(this, property)
-                    };
-                });
-
-                Object.defineProperties(this, descriptor);
+                this[URI_DATA_KEY].scheme = this[URI_DATA_KEY].uri.getScheme();
+                this[URI_DATA_KEY].host = this[URI_DATA_KEY].uri.getHost();
+                this[URI_DATA_KEY].port = this[URI_DATA_KEY].uri.getPort();
+                this[URI_DATA_KEY].path = this[URI_DATA_KEY].uri.getPath();
+                this[URI_DATA_KEY].query = URI.queryParse(this[URI_DATA_KEY].uri.getQuery() || "");
+                this[URI_DATA_KEY].fragment = this[URI_DATA_KEY].uri.getFragment();
             }
+
+            URI.prototype.getJavaURI = function () {
+                if (!this[URI_DATA_KEY].uri) {
+                    this[URI_DATA_KEY].uri = URI.createJavaURIFromComponents({
+                        scheme: this[URI_DATA_KEY].scheme,
+                        host: this[URI_DATA_KEY].host,
+                        port: this[URI_DATA_KEY].port,
+                        path: this[URI_DATA_KEY].path,
+                        query: this[URI_DATA_KEY].query,
+                        fragment: this[URI_DATA_KEY].fragment
+                    });
+                }
+                return this[URI_DATA_KEY].uri;
+            };
+            /*
+                        URI.prototype.getScheme = function () {
+                            return this[URI_DATA_KEY].scheme;
+                        };
+                        URI.prototype.setScheme = function (scheme) {
+                            this[URI_DATA_KEY].scheme = scheme;
+                            this[URI_DATA_KEY].uri = null;
+                        };
+            
+                        URI.prototype.getHost = function () {
+                            return this[URI_DATA_KEY].host;
+                        };
+                        URI.prototype.setHost = function (host) {
+                            this[URI_DATA_KEY].host = host;
+                            this[URI_DATA_KEY].uri = null;
+                        };
+            
+                        URI.prototype.getPort = function () {
+                            return this[URI_DATA_KEY].port;
+                        };
+                        URI.prototype.setPort = function (port) {
+                            this[URI_DATA_KEY].port = port;
+                            this[URI_DATA_KEY].uri = null;
+                        };
+            
+                        URI.prototype.getPath = function () {
+                            return this[URI_DATA_KEY].path;
+                        };
+                        URI.prototype.setPath = function (path) {
+                            this[URI_DATA_KEY].path = path;
+                            this[URI_DATA_KEY].uri = null;
+                        };
+            
+                        URI.prototype.getQuery = function () {
+                            return this[URI_DATA_KEY].query;
+                        };
+                        URI.prototype.setQuery = function (queryObj) {
+                            this[URI_DATA_KEY].query = queryObj;
+                            this[URI_DATA_KEY].uri = null;
+                        };
+                        URI.prototype.mergeQuery = function (queryObj) {
+                            this[URI_DATA_KEY].query = Object.assign({}, this[URI_DATA_KEY].query, queryObj);
+                            this[URI_DATA_KEY].uri = null;
+                        }
+            
+                        URI.prototype.getFragment = function () {
+                            return this[URI_DATA_KEY].fragment;
+                        };
+                        URI.prototype.setFragment = function (fragment) {
+                            this[URI_DATA_KEY].fragment = fragment;
+                            this[URI_DATA_KEY].uri = null;
+                        };
+                        URI.prototype.getEncodedPath = function () {
+                            return this.getJavaURI().getPath();
+                        };
+                        URI.prototype.getEncodedQueryString = function () {
+                            return this.getJavaURI().getQuery();
+                        };
+                        URI.prototype.getEncodedFragment = function () {
+                            return this.getJavaURI().getFragment();
+                        };
+                        URI.prototype.toString = function () {
+                            return String(this.getJavaURI().toASCIIString());
+                        };
+                        URI.prototype.toRawString = function () {
+                            return String(this.getJavaURI().toString());
+                        };*/
+            URI.upData = function (instance, key, value) {
+                instance[URI_DATA_KEY][key] = value;
+                instance[URI_DATA_KEY].uri = null;
+            };
+
+            ["scheme", "host", "port", "path", "query", "fragment"].forEach((key) => {
+                const name = key.charAt(0).toUpperCase() + key.slice(1);
+                URI.prototype["get" + name] = function () {
+                    return this[URI_DATA_KEY][key];
+                };
+                URI.prototype["set" + name] = function (value) {
+                    URI.upData(this, key, value);
+                };
+            });
+            URI.prototype.mergeQuery = function (queryObj) {
+                URI.upData(this, "query", Object.assign({}, this[URI_DATA_KEY].query, queryObj));
+            };
+            ["encodedPath", "encodedQueryString", "encodedFragment"].forEach((key) => {
+                const name = key.charAt(0).toUpperCase() + key.slice(1);
+                URI.prototype["get" + name] = function () {
+                    return this.getJavaURI()["get" + name.replace("encoded", "")]();
+                };
+            });
+            URI.prototype.toString = function () {
+                return String(this.getJavaURI().toASCIIString());
+            };
+            URI.prototype.toRawString = function () {
+                return String(this.getJavaURI().toString());
+            };
+
 
             URI.JavaURI = Packages.java.net.URI;
 
@@ -288,7 +336,7 @@ function PGIModules() {
              * @param {Object} queryObj 
              */
             URI.queryStringfy = function (queryObj) {
-                Object.keys(queryObj).map(key => {
+                return Object.keys(queryObj).map(key => {
                     return key + "=" + queryObj[key];
                 }).join("&");
             }
