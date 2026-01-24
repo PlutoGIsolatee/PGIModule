@@ -531,100 +531,172 @@ function PGIModules() {
 
     function JsExtensionsModule() {
         if (!modules.JsExtensionsModule) {
-            /**
-             * @todo
-             */
-            const OUTPUT_MAX_LENGTH = 10000;
+            const basicModule = BasicModule();
+
+            const CONSOLE_DEFAULT_MAX_LENGTH = 2000;
 
             /**
-             * 日志
-             * @param {...any} messageSources
+             * 消息输出
+             * @param {Array<any>} messageSources
+             * @param {Object} [options]
+             * @param {number} [options.maxLength = CONSOLE_DEFAULT_MAX_LENGTH]
+             * @param {boolean} [options.itemize = true] - 是否分项输出
              */
-            function log(...messageSources) {
-                java.log(
-                    truncateMiddle(
-                        messageSources
-                            .map(objectToString)
-                            .join("\n"),
-                        OUTPUT_MAX_LENGTH)
-                );
-            }
-
-            /**
-             * toast
-             * @param {...any} messageSources
-             */
-            function toast(...messageSources) {
-                java.toast(
-                    truncateMiddle(
-                        messageSources
-                            .map(objectToString)
-                            .join("\n"),
-                        OUTPUT_MAX_LENGTH)
-                );
-            }
-
-            /**
-             * longToast
-             * @param {...any} messageSources
-             */
-            function longToast(...messageSources) {
-                java.longToast(
-                    truncateMiddle(
-                        messageSources
-                            .map(objectToString)
-                            .join("\n"),
-                        OUTPUT_MAX_LENGTH)
-                );
-            }
-
-            /**
-             * toast、日志
-             * @param {...any} messageSources
-             */
-            function toastLog(...messageSources) {
-                java.toast(java.log(
-                    truncateMiddle(
-                        messageSources
-                            .map(objectToString)
-                            .join("\n"),
-                        OUTPUT_MAX_LENGTH)
-                ));
-            }
-
-            /**
-             * longToast、日志
-             * @param {...any} messageSources
-             */
-            function longToastLog(...messageSources) {
-                java.longToast(java.log(
-                    truncateMiddle(
-                        messageSources
-                            .map(objectToString)
-                            .join("\n"),
-                        OUTPUT_MAX_LENGTH)
-                ));
-            }
             function Console(messageSources, {
-                maxLength,
+                maxLength = CONSOLE_DEFAULT_MAX_LENGTH,
                 itemize = true
             } = {}) {
-                this.messages = messageSources.map(objectToString)
+                this.messages = messageSources.map(objectToString).map(msg => truncateMiddle(msg, maxLength));
                 this.maxLength = maxLength;
                 this.itemize = itemize;
-                if (this.itemize) {
+                if (!this.itemize) {
                     this.message = this.messages.join("\n- ");
                 }
             }
+            function ConsoleOutputter(method) {
+                return function () {
+                    if (this.itemize) {
+                        this.messages.forEach(msg => {
+                            method(msg);
+                        });
+                    } else {
+                        method(this.message);
+                    }
+                }
+            }
+            Console.prototype.log = ConsoleOutputter(java.log.bind(java));
+            Console.prototype.toast = ConsoleOutputter(java.toast.bind(java));
+            Console.prototype.longToast = ConsoleOutputter(java.longToast.bind(java));
+            Console.prototype.toastLog = ConsoleOutputter(msg => {
+                java.toast(java.log(msg));
+            });
+            Console.prototype.longToastLog = ConsoleOutputter(msg => {
+                java.longToast(java.log(msg));
+            });
+
+            function log(...messageSources) {
+                new Console(messageSources).log();
+            }
+            function toast(...messageSources) {
+                new Console(messageSources).toast();
+            }
+            function longToast(...messageSources) {
+                new Console(messageSources).longToast();
+            }
+            function toastLog(...messageSources) {
+                new Console(messageSources).toastLog();
+            }
+            function longToastLog(...messageSources) {
+                new Console(messageSources).longToastLog();
+            }
+
+            /**
+             * 源变量初始值
+             * @type {JSON}
+             */
+            const INITIAL_SOURCE_VARIABLE = {
+                user_id: 0,
+                user_key: "",
+                baseUrl: "https://zh.pkuedu.online/",
+                filter: [],
+                doFilter: true,
+                doCheck: false,
+                storage: {}
+            };
+
+            /*
+            function checkVariable() {
+                try {
+                    let v = source.getVariable();
+                    if (!v || v.isEmpty()) {
+                        throw new Error();
+                    }
+                    return JSON.parse(v);
+                } catch {
+                    let v = INITIAL_SOURCE_VARIABLE;
+                    source.setVariable(JSON.stringify(v));
+                    java.log("已重置源变量");
+                    return v;
+                }
+            }
+
+            
+            function setVariableValue(key, value) {
+                let va = checkVariable();
+                va[key] = value;
+                source.setVariable(JSON.stringify(va));
+                return java.log(`已设置 ${key} 为 ${value}`) + "\n";
+            }
+
+            function getVariableValue(key) {
+                var va = checkVariable();
+                return va[key];
+            }
+                */
+
+            const SourceVariable = Object.create(null);
+
+            SourceVariable.init = function init() {
+                source.setVariable(JSON.stringify(INITIAL_SOURCE_VARIABLE));
+                java.log("已初始化源变量");
+                return INITIAL_SOURCE_VARIABLE;
+            };
+
+            Object.defineProperty(SourceVariable, "data", {
+                get: function () {
+                    try {
+                        let value = source.getVariable();
+                        if (!value || value.isEmpty()) {
+                            throw new Error();
+                        }
+                        return JSON.parse(value);
+                    } catch {
+                        return SourceVariable.init();
+                    }
+                }
+            });
+
+            /**
+             * @todo
+             */
 
 
 
+            modules.JsExtensionsModule = Object.create(basicModule);
+            basicModule.defineDataPropertiesFromSource(
+                modules.JsExtensionsModule,
+                {
+                    Console,
+                    log,
+                    toast,
+                    longToast,
+                    toastLog,
+                    longToastLog
+                }
+            );
         }
         return modules.JsExtensionsModule;
     }
 
     return { build };
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /**
  * @deprecated 待重构
@@ -694,60 +766,6 @@ function PGIModules(kitName) {
 
 
 
-            /**
-             * 源变量初始值
-             */
-            const INITIAL_SOURCE_VARIABLE = {
-                user_id: 0,
-                user_key: "",
-                baseUrl: "https://zh.pkuedu.online/",
-                filter: [],
-                doFilter: true,
-                doCheck: true,
-                storage: {}
-            };
-
-            /**
-             * 检查源变量，如有问题重置
-             * @returns {JSON} 源变量初始解析对象
-             */
-            function checkVariable() {
-                try {
-                    let v = source.getVariable();
-                    if (v.isEmpty()) {
-                        throw Error("");
-                    }
-                    return JSON.parse(v);
-                } catch {
-                    let v = INITIAL_SOURCE_VARIABLE;
-                    source.setVariable(JSON.stringify(v));
-                    java.log("已重置源变量");
-                    return v;
-                }
-            }
-
-            /**
-             * 设置源变量键值
-             * @param {string} key - 键名
-             * @param {any} value - 键值 没有类型检查，总之最后会被过滤为有效的JSON结构
-             * @returns {string} 已设置key为value\n
-             */
-            function setVariableValue(key, value) {
-                let va = checkVariable();
-                va[key] = value;
-                source.setVariable(JSON.stringify(va));
-                return java.log(`已设置 ${key} 为 ${value}`) + "\n";
-            }
-
-            /**
-             * 获取源变量键值
-             * @param {string} key - 键名
-             * @returns {JSON} 键值
-             */
-            function getVariableValue(key) {
-                var va = checkVariable();
-                return va[key];
-            }
 
             const WRAPPER_DEFAULT_MAX_ERROR_MESSAGE_LENGTH = ERROR_TO_STRING_DEFAULT_MAX_MESSAGE_LENGTH;
             const WRAPPER_DEFAULT_MAX_RETURN_STRING_LENGTH = 2000;
