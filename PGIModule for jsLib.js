@@ -1,6 +1,6 @@
 /**
  * @file smart js module for legado
- * @version 260120.1
+ * @version 260124.1
  * @author PlutoGIsolatee <plutoqweguo@126.com>
  * @license LGPL-2.1.only
  */
@@ -211,73 +211,7 @@ function PGIModules() {
                 }
                 return this[URI_DATA_KEY].uri;
             };
-            /*
-                        URI.prototype.getScheme = function () {
-                            return this[URI_DATA_KEY].scheme;
-                        };
-                        URI.prototype.setScheme = function (scheme) {
-                            this[URI_DATA_KEY].scheme = scheme;
-                            this[URI_DATA_KEY].uri = null;
-                        };
-            
-                        URI.prototype.getHost = function () {
-                            return this[URI_DATA_KEY].host;
-                        };
-                        URI.prototype.setHost = function (host) {
-                            this[URI_DATA_KEY].host = host;
-                            this[URI_DATA_KEY].uri = null;
-                        };
-            
-                        URI.prototype.getPort = function () {
-                            return this[URI_DATA_KEY].port;
-                        };
-                        URI.prototype.setPort = function (port) {
-                            this[URI_DATA_KEY].port = port;
-                            this[URI_DATA_KEY].uri = null;
-                        };
-            
-                        URI.prototype.getPath = function () {
-                            return this[URI_DATA_KEY].path;
-                        };
-                        URI.prototype.setPath = function (path) {
-                            this[URI_DATA_KEY].path = path;
-                            this[URI_DATA_KEY].uri = null;
-                        };
-            
-                        URI.prototype.getQuery = function () {
-                            return this[URI_DATA_KEY].query;
-                        };
-                        URI.prototype.setQuery = function (queryObj) {
-                            this[URI_DATA_KEY].query = queryObj;
-                            this[URI_DATA_KEY].uri = null;
-                        };
-                        URI.prototype.mergeQuery = function (queryObj) {
-                            this[URI_DATA_KEY].query = Object.assign({}, this[URI_DATA_KEY].query, queryObj);
-                            this[URI_DATA_KEY].uri = null;
-                        }
-            
-                        URI.prototype.getFragment = function () {
-                            return this[URI_DATA_KEY].fragment;
-                        };
-                        URI.prototype.setFragment = function (fragment) {
-                            this[URI_DATA_KEY].fragment = fragment;
-                            this[URI_DATA_KEY].uri = null;
-                        };
-                        URI.prototype.getEncodedPath = function () {
-                            return this.getJavaURI().getPath();
-                        };
-                        URI.prototype.getEncodedQueryString = function () {
-                            return this.getJavaURI().getQuery();
-                        };
-                        URI.prototype.getEncodedFragment = function () {
-                            return this.getJavaURI().getFragment();
-                        };
-                        URI.prototype.toString = function () {
-                            return String(this.getJavaURI().toASCIIString());
-                        };
-                        URI.prototype.toRawString = function () {
-                            return String(this.getJavaURI().toString());
-                        };*/
+
             URI.upData = function (instance, key, value) {
                 instance[URI_DATA_KEY][key] = value;
                 instance[URI_DATA_KEY].uri = null;
@@ -292,15 +226,18 @@ function PGIModules() {
                     URI.upData(this, key, value);
                 };
             });
+
             URI.prototype.mergeQuery = function (queryObj) {
                 URI.upData(this, "query", Object.assign({}, this[URI_DATA_KEY].query, queryObj));
             };
+
             ["encodedPath", "encodedQueryString", "encodedFragment"].forEach((key) => {
                 const name = key.charAt(0).toUpperCase() + key.slice(1);
                 URI.prototype["get" + name] = function () {
                     return this.getJavaURI()["get" + name.replace("encoded", "")]();
                 };
             });
+
             URI.prototype.toString = function () {
                 return String(this.getJavaURI().toASCIIString());
             };
