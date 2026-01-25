@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>历史信息</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            text-align: center;
+        }
+        .message {
+            border-bottom: 1px solid #ccc;
+            padding: 10px 0;
+        }
+        .timestamp {
+            color: #888;
+            font-size: 0.9em;
+        }
+        .content {
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>历史信息</h1>
+    <div id="messages"></div>
+
+    <script>
+        // 模拟从 MessageManager 获取历史信息
+        const messages = [
+            { timestamp: '2024-06-01 10:00', content: '这是第一条历史信息。' },
+            { timestamp: '2024-06-01 11:00', content: '这是第二条历史信息。' },
+            { timestamp: '2024-06-01 12:00', content: '这是第三条历史信息。' }
+        ];
+
+        const messagesContainer = document.getElementById('messages');
+
+        messages.forEach(msg => {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+
+            const timestampDiv = document.createElement('div');
+            timestampDiv.classList.add('timestamp');
+            timestampDiv.textContent = msg.timestamp;
+
+            const contentDiv = document.createElement('div');
+            contentDiv.classList.add('content');
+            contentDiv.textContent = msg.content;
+
+            messageDiv.appendChild(timestampDiv);
+            messageDiv.appendChild(contentDiv);
+            messagesContainer.appendChild(messageDiv);
+        });
+    </script>
+</body>
+</html>

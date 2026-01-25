@@ -1,6 +1,6 @@
 /**
  * @file smart js module for legado
- * @version 260124.1
+ * @version 260125.1
  * @author PlutoGIsolatee <plutoqweguo@126.com>
  * @license LGPL-2.1.only
  */
@@ -23,16 +23,7 @@ function PGIModules() {
     const here = this;
 
     //单例模块缓存
-    const modules = {
-        basicModule: {},
-        JsEncodeUtilsModule: {},
-        JsExtensionsModule: {},
-        AnalyzeRuleModule: {},
-        AnalyzeUrlModule: {},
-        RssJsExtensionsModule: {},
-        SourceLoginJsExtensionsModule: {},
-        WebViewModule: {}
-    }
+    const modules = Object.create(null);
 
     function build(kitName) {
 
@@ -328,6 +319,90 @@ function PGIModules() {
             }
 
             /**
+             * 时间相关工具
+             * @namespace Time
+             */
+            const Time = Object.create(null);
+
+            Time.JavaZonedDateTime = Packages.java.time.ZonedDateTime;
+
+            Time.getCurrentZonedDateTime = function () {
+                return Time.JavaZonedDateTime.now().toString();
+            };
+
+            /**
+             * Java LinkedHashMap封装; 保持插入顺序的键值对映射
+             * @param {Array<[any, any]>} [literal = []] - 键值对数组初始化
+             * @return {LinkedHashMap}
+             * @namespace LinkedHashMap
+             */
+            function LinkedHashMap(literal = []) {
+                const map = new LinkedHashMap.JavaLinkedHashMap();
+                literal.forEach(([key, value]) => {
+                    map.put(key, value);
+                });
+                this.map = map;
+            }
+
+            LinkedHashMap.JavaLinkedHashMap = Packages.java.util.LinkedHashMap;
+
+            LinkedHashMap.prototype.get = function (key) {
+                return this.map.get(key);
+            };
+
+            LinkedHashMap.prototype.put = function (key, value) {
+                return this.map.put(key, value);
+            };
+
+            LinkedHashMap.prototype.remove = function (key) {
+                return this.map.remove(key);
+            };
+
+            LinkedHashMap.prototype.isEmpty = function () {
+                return this.map.isEmpty();
+            };
+
+            LinkedHashMap.prototype.size = function () {
+                return this.map.size();
+            };
+
+            LinkedHashMap.prototype.clear = function () {
+                return this.map.clear();
+            };
+
+            LinkedHashMap.prototype.putAll = function (otherMap) {
+                return this.map.putAll(otherMap.map);
+            };
+
+            LinkedHashMap[Symbol.iterator] = function* () {
+                const iterator = this.map.entrySet().iterator();
+                while (iterator.hasNext()) {
+                    const entry = iterator.next();
+                    yield [entry.getKey(), entry.getValue()];
+                }
+            }
+
+            LinkedHashMap.prototype.toString = function () {
+                return this.map.toString();
+            };
+
+            LinkedHashMap.prototype.toArray = function () {
+                return Array.from(this);
+            };
+
+            LinkedHashMap.prototype.toObject = function () {
+                const obj = {};
+                this.toArray().forEach(([key, value]) => {
+                    obj[key] = value;
+                });
+                return obj;
+            };
+
+            LinkedHashMap.prototype.toJSON = function () {
+                return JSON.stringify(this.toArray());
+            };
+
+            /**
              * 柯里化; 支持占位符curry._
              * @example
              * const add = (a, b, c) => a + b + c;
@@ -523,7 +598,9 @@ function PGIModules() {
                 defineAccessorPropertiesFromSource,
                 defineAccessorPropertiesFromSources,
                 defineDataPropertiesFromSource,
-                defineDataPropertiesFromSources
+                defineDataPropertiesFromSources,
+                Time,
+                LinkedHashMap
             });
         }
         return modules.basicModule;
@@ -531,17 +608,32 @@ function PGIModules() {
 
     function JsExtensionsModule() {
         if (!modules.JsExtensionsModule) {
+
             const basicModule = BasicModule();
 
-            const CONSOLE_DEFAULT_MAX_LENGTH = 2000;
+            modules.JsExtensionsModule = Object.create(basicModule);
 
-            /**
-             * 消息输出
-             * @param {Array<any>} messageSources
-             * @param {Object} [options]
-             * @param {number} [options.maxLength = CONSOLE_DEFAULT_MAX_LENGTH]
-             * @param {boolean} [options.itemize = true] - 是否分项输出
-             */
+            const {
+                URI,
+                getAbsoluteURL,
+                curry,
+                checkJSON,
+                checkURI,
+                objectToString,
+                truncateMiddle,
+                errorToString,
+                defineAccessorPropertiesFromSource,
+                defineAccessorPropertiesFromSources,
+                defineDataPropertiesFromSource,
+                defineDataPropertiesFromSources,
+                Time,
+                LinkedHashMap
+            } = basicModule;
+
+            sourceKey = source.getKey();
+            sourceTag = source.getTag();
+
+            /*
             function Console(messageSources, {
                 maxLength = CONSOLE_DEFAULT_MAX_LENGTH,
                 itemize = true
@@ -588,7 +680,47 @@ function PGIModules() {
             }
             function longToastLog(...messageSources) {
                 new Console(messageSources).longToastLog();
+            }*/
+
+            const MESSAGE_MANAGER_DEFAULT_SINGLE_MAX_LENGTH = 2000;
+            const MESSAGE_MANAGER_DISPLAY_ALL_HTML_URL = "";
+
+            const MessageManager = Object.create(null);
+
+            MessageManager.fileKey = `${sourceKey}_PGI_MessageManager`;
+
+            MessageManager.storage = new LinkedHashMap(JSON.parse(cache.getFile(MessageManager.fileKey) || "[]"));
+
+            MessageManager.bucket = new LinkedHashMap();
+
+            MessageManager.put = function put(message) {
+                const key = basicModule.Time.getCurrentZonedDateTime();
+                MessageManager.storage.put(key, objectToString(message));
             }
+
+            MessageManager.flush = function flush() {
+                storage.putAll(MessageManager.bucket);
+                cache.putFile(MessageManager.fileKey, storage.toJSON());
+                bucket.clear();
+            }
+
+            MessageManager.log = function log() {
+                MessageManager.bucket.toArray().forEach(([key, value]) => {
+                    java.log(`[${key}]：${value}`);
+                });
+                MessageManager.flush();
+            }
+
+            MessageManager.displayAll = function displayAll() {
+                java.put(`MessageManager.plutogisolatee/${sourceKey}`, MessageManager.storage.toJSON());
+                const displayAllHTML = java.cacheFile(MESSAGE_MANAGER_DISPLAY_ALL_HTML_URL).replaceAll("#@#@#@#", ``);
+
+                java.startBrowser(`MessageManager.plutogisolatee/${sourceKey}`, `${sourceTag}历史消息`, displayAllHTML);
+            };
+
+            /**
+                         * @todo
+                         */
 
             /**
              * 源变量初始值
