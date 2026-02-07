@@ -16,14 +16,14 @@ function OkHttpClient({
 
     let builder;
 
-    if (!this.OKHTTP_CLIENT_INSTANCE) {
+    if (!OkHttpClient.OKHTTP_CLIENT_INSTANCE) {
         builder = new OkHttpClient.JavaOkHttpClient.Builder();
     } else {
-        builder = this.OKHTTP_CLIENT_INSTANCE
+        builder = OkHttpClient.OKHTTP_CLIENT_INSTANCE
             .newBuilder();
     }
 
-    this.javaOkHttpClient = builder
+    OkHttpClient.OKHTTP_CLIENT_INSTANCE = this.javaOkHttpClient = builder
         .followRedirects(followRedirects)
         .retryOnConnectionFailure(retryOnConnectionFailure)
         .connectTimeout(connectTimeout, s)
