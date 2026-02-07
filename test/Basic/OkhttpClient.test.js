@@ -1,4 +1,9 @@
-function OkhttpClient({
+/**
+ * OK
+ */
+
+function execute() {
+    function OkhttpClient({
         followRedirects = true,
         connectTimeout = 10000,
         readTimeout = 30000,
@@ -15,3 +20,4 @@ function OkhttpClient({
     }
 
     OkhttpClient.JavaOkhttpClient = Packages.okhttp3.OkhttpClient;
+}
