@@ -5,7 +5,7 @@
  */
 
 const URI_JAVA_CLASS_URI = Symbol("URI.JavaClassURI");
-const URI_JAVA_CLASS_URI_INSTANCE = Symbol("URI.prototype.javaClassURIInstanceKey");
+const URI_JAVA_CLASS_URI_INSTANCE = Symbol("URI.prototype.javaClassURIInstance");
 const URI_DATA = Symbol("URI.data");
 const URI_GET_JAVA_URI = Symbol("URI.prototype.getJavaURI");
 const URI_STATIC_CREATE_JAVA_URI_FROM_COMPONENTS = Symbol("URI.createJavaURIFromComponents");
