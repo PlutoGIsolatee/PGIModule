@@ -1,8 +1,7 @@
 @js:
 /**
  * OK
- * @todo Query.prototype.values代理
- * @todo 编码字符集设置
+ * @todo 编码字符集设置；newBuilder
  */
 
 const URI_JAVA_CLASS_URI = Symbol("URI.JavaClassURI");
@@ -85,6 +84,10 @@ URI[URI_STATIC_CREATE_JAVA_URI_FROM_COMPONENTS] = function createJavaURIFromComp
     );
 };
 
+/**
+ * 目前须使用其他字符集时可重写该方法；
+ * 或继承URI并实现同名方法
+ */
 URI.encode = function encode(raw) {
     return String(URI[URI_JAVA_CLASS_URL_ENCODER].encode(raw, URI[URI_JAVA_CONSTANT_UTF_8_NAME]));
 };
@@ -132,7 +135,15 @@ URI.Query.prototype.add = function add(key, value) {
 };
 
 URI.Query.prototype.values = function values(key) {
-    return this[URI_QUERY_MAP].get(key);
+    const trap = () => {
+        throw new TypeError("Query.prototype.values返回为只读");
+    };
+    const proxy = new Proxy(this[URI_QUERY_MAP].get(key), {
+        set: trap,
+        defineProperty: trap,
+        deleteProperty: trap
+    });
+    return proxy;
 };
 
 URI.Query.prototype.build = function build() {
@@ -242,6 +253,21 @@ test("Query build测试", () => {
         .log(java)
 });
 
+test("Query values测试", () => {
+    const query = new URI.Query([
+        ["a", ["我", "你"]],
+        ["b", "它"],
+        ["c"]
+    ]);
+    expect(query.values("a")[0])
+        .toBe("我");
+
+    expect(() => {
+            query.values("a")[0] = "他";
+        })
+        .toThrow("TypeError");
+});
+
 
 
 test("实例化测试", () => {
@@ -249,49 +275,53 @@ test("实例化测试", () => {
 });
 
 test("常量注册测试", () => {
-    expect(URI.HOST.get).toBe("getHost");
+    expect(URI.HOST.get)
+        .toBe("getHost");
 });
 
 test("getJavaURI测试", () => {
     const uri = new URI("https://www.baidu.com");
     uri[URI_JAVA_CLASS_URI_INSTANCE] = null;
-    expect(String(uri[URI_GET_JAVA_URI]())).toBe("https://www.baidu.com");
+    expect(String(uri[URI_GET_JAVA_URI]()))
+        .toBe("https://www.baidu.com");
 });
 
 test("upData测试", () => {
     const uri = new URI("https://www.baidu.com");
     uri[URI_UP_DATA]("scheme", "http");
-    expect(uri[URI_JAVA_CLASS_URI_INSTANCE]).toBe(null);
-    expect(String(uri[URI_GET_JAVA_URI]().getScheme())).toBe("http");
+    expect(uri[URI_JAVA_CLASS_URI_INSTANCE])
+        .toBe(null);
+    expect(String(uri[URI_GET_JAVA_URI]().getScheme()))
+        .toBe("http");
 });
 
-// 测试 setScheme 方法
 test("setScheme 方法测试", () => {
     const uri = new URI("https://www.example.com:8080/path?key=value#fragment");
     uri.setScheme("http");
-    // 验证调用更新方法后，URI实例缓存被清空（根据示例逻辑推断）
-    expect(uri[URI_JAVA_CLASS_URI_INSTANCE]).toBe(null);
-    // 验证底层Java URI对象的scheme已被正确修改
-    expect(String(uri[URI_GET_JAVA_URI]().getScheme())).toBe("http");
+    expect(uri[URI_JAVA_CLASS_URI_INSTANCE])
+        .toBe(null);
+    expect(String(uri[URI_GET_JAVA_URI]().getScheme()))
+        .toBe("http");
 });
 
-// 测试 setHost 方法
 test("setHost 方法测试", () => {
     const uri = new URI("https://www.example.com:8080/path?key=value#fragment");
     uri.setHost("newsite.com");
-    expect(uri[URI_JAVA_CLASS_URI_INSTANCE]).toBe(null);
-    expect(String(uri[URI_GET_JAVA_URI]().getHost())).toBe("newsite.com");
+    expect(uri[URI_JAVA_CLASS_URI_INSTANCE])
+        .toBe(null);
+    expect(String(uri[URI_GET_JAVA_URI]().getHost()))
+        .toBe("newsite.com");
 });
 
-// 测试 setPort 方法
 test("setPort 方法测试", () => {
     const uri = new URI("https://www.example.com:8080/path?key=value#fragment");
     uri.setPort(9090);
-    expect(uri[URI_JAVA_CLASS_URI_INSTANCE]).toBe(null);
-    expect(uri[URI_GET_JAVA_URI]().getPort()).toBe(9090);
+    expect(uri[URI_JAVA_CLASS_URI_INSTANCE])
+        .toBe(null);
+    expect(uri[URI_GET_JAVA_URI]().getPort())
+        .toBe(9090);
 });
 
-// 测试 setPath 方法
 test("setPath 方法测试", () => {
     const uri = new URI("https://www.example.com:8080/path?key=value#fragment");
     uri.setPath("/new/path");
@@ -315,7 +345,6 @@ test("setQuery 方法测试", () => {
 
 });
 
-// 测试 setFragment 方法
 test("setFragment 方法测试", () => {
     const uri = new URI("https://www.example.com:8080/path?key=value#fragment");
     uri.setFragment("newSection");
@@ -328,43 +357,40 @@ test("getComponent测试", () => {
     expect(String(uri[URI_GET_COMPONENT](URI.SCHEME))).toBe("https");
 });
 
-
-// 测试：基础URI组件的获取
-test("getScheme 方法测试 - 应正确返回协议头", () => {
+test("getScheme 方法测试", () => {
     const uri = new URI("https://www.example.com:8080/path/to/resource?name=value#section");
     const scheme = uri.getScheme();
     expect(scheme).toBe("https");
 });
 
-test("getHost 方法测试 - 应正确返回主机名", () => {
+test("getHost 方法测试", () => {
     const uri = new URI("https://www.example.com:8080/path/to/resource?name=value#section");
     const host = uri.getHost();
     expect(host).toBe("www.example.com");
 });
 
-test("getPort 方法测试 - 应正确返回端口号", () => {
+test("getPort 方法测试", () => {
     const uri = new URI("https://www.example.com:8080/path/to/resource?name=value#section");
     const port = uri.getPort();
     expect(port).toBe(8080);
 });
 
-test("getPath 方法测试 - 应正确返回路径", () => {
+test("getPath 方法测试", () => {
     const uri = new URI("https://www.example.com:8080/path/to/resource?name=value#section");
     const path = uri.getPath();
     expect(path).toBe("/path/to/resource");
 });
 
-test("getQuery 方法测试 - 应正确返回查询对象", () => {
+test("getQuery 方法测试", () => {
     const uri = new URI("https://www.example.com:8080/path?key1=val1&key2=val2#section");
     const query = uri.getQuery();
     const queryStr = query.build();
-    // 验证查询字符串包含关键参数，注意参数顺序可能不固定
     expect(queryStr)
         .toContain("key1=val1")
         .toContain("key2=val2");
 });
 
-test("getFragment 方法测试 - 应正确返回片段标识", () => {
+test("getFragment 方法测试", () => {
     const uri = new URI("https://www.example.com:8080/path/to/resource?name=value#section");
     const fragment = uri.getFragment();
     expect(fragment).toBe("section");
@@ -378,7 +404,6 @@ test("getQuery 方法测试 - 处理无查询参数的URI", () => {
 });
 
 test("getPort 方法测试 - 处理默认端口（隐式）", () => {
-    // HTTPS默认端口443，HTTP默认端口80，在URI中通常省略
     const uriHttps = new URI("https://www.example.com/path");
     const uriHttp = new URI("http://www.example.com/path");
     expect(uriHttps.getPort()).toBe(-1);
@@ -386,14 +411,11 @@ test("getPort 方法测试 - 处理默认端口（隐式）", () => {
     expect(uriHttp[URI_GET_JAVA_URI]().getPort()).toBe(-1);
 });
 
-// 测试：结合setter方法，验证设置后能正确获取（集成测试）
-test("setter与getter集成测试 - 修改后能正确反映新值", () => {
+test("setter与getter测试", () => {
     const uri = new URI("https://oldhost.com/oldpath");
     uri.setHost("newhost.com");
     uri.setPath("/newpath");
-    // 验证内部缓存已清空（根据您的设计）
     expect(uri[URI_JAVA_CLASS_URI_INSTANCE]).toBe(null);
-    // 重新获取Java URI对象并验证新值
     const javaUri = uri[URI_GET_JAVA_URI]();
     expect(String(javaUri.getHost())).toBe("newhost.com");
     expect(String(javaUri.getPath())).toBe("/newpath");
@@ -401,4 +423,13 @@ test("setter与getter集成测试 - 修改后能正确反映新值", () => {
     expect(uri.getHost()).toBe("newhost.com");
     expect(uri.getPath()).toBe("/newpath");
     expect(uri.toString()).toBe("https://newhost.com/newpath");
+});
+
+test("编码字符集设置测试 通过直接修改encode", () => {
+    const encode = URI.encode;
+    URI.encode = function toGBK() {
+
+    };
+
+    URI.encode = encode;
 });
