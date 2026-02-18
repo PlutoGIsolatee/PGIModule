@@ -1,0 +1,23 @@
+{
+  "name": "pgimodule",
+  "version": "1.0.0",
+  "description": "JavaScript module developed for Legado book source",
+  "homepage": "https://github.com/PlutoGIsolatee/PGIModule#readme",
+  "bugs": {
+    "url": "https://github.com/PlutoGIsolatee/PGIModule/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PlutoGIsolatee/PGIModule.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "PGIModule for jsLib.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
