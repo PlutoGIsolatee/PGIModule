@@ -37,7 +37,7 @@ Asserts.prototype.toNotContain = function toNotContain(element) {
 
 Asserts.prototype.toHas = function toHas(key) {
     const result = this.src;
-    if (!Object.hasOwn(result, key)) {
+    if (!Reflect.has(result, key)) {
         throw new Error(`预期包含${key}，实际值${result}，可枚举键${Object.keys(result)}`);
     }
     return this;
@@ -45,13 +45,29 @@ Asserts.prototype.toHas = function toHas(key) {
 
 Asserts.prototype.toNotHas = function toNotHas(key) {
     const result = this.src;
+    if (Reflect.has(result, key)) {
+        throw new Error(`预期不包含${key}，实际值${result}，可枚举键${Object.keys(result)}`);
+    }
+    return this;
+};
+
+Asserts.prototype.toHasOwn = function toHas(key) {
+    const result = this.src;
+    if (!Object.hasOwn(result, key)) {
+        throw new Error(`预期包含${key}，实际值${result}，可枚举键${Object.keys(result)}`);
+    }
+    return this;
+};
+
+Asserts.prototype.toNotHasOwn = function toNotHas(key) {
+    const result = this.src;
     if (Object.hasOwn(result, key)) {
         throw new Error(`预期不包含${key}，实际值${result}，可枚举键${Object.keys(result)}`);
     }
     return this;
 };
 
-Asserts.prototype.toThrow = function toThrow(name) {
+Asserts.prototype.toThrow = function toThrow(name = "Error") {
     const fun = this.src;
     let err;
     try {
@@ -77,6 +93,6 @@ function test(desc, fn) {
         java.log(`${desc} 测试通过`);
     } catch (error) {
         java.longToast("测试失败！");
-        java.log(`${desc} 测试失败，${error}`);
+        java.log(`${desc} 测试失败 error.tag，${error}`);
     }
 }
